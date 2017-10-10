@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 
 
-def main():
+def ar_readmag():
     """Grab latest fits file time from JSOC.
     First find the latest url, download that using the fits file name.
     Then read it with SunPy and make a plot.
@@ -46,7 +46,9 @@ def main():
     data_dir = "".join([os.path.expanduser('~'), config.get('paths','data_dir')])
     fits = download(link,folder=data_dir)
     ## Read file and plot it
-    plot_map(fits,data_dir)
+    map = plot_map(fits, data_dir)
+    map.save(data_dir + 'latest.fits', filetype='auto')
+    return map
 
 def get_link(url,strip_no):
     """Standard URL grab, making sure the latest version is downloaded.
@@ -82,7 +84,7 @@ def web_request(url):
     web_file = urllib.request.build_opener().open(web_file)
     return web_file
 
-def plot_map(fits,folder):
+def plot_map(fits, folder):
     """Quickplot of HMI data just downloaded
     Data is in map.data"""
     map = sunpy.map.Map(fits)
@@ -91,7 +93,7 @@ def plot_map(fits,folder):
         map = map.resample(u.Quantity([1024, 1024], u.pixel))
     ## Normalise
     map.plot_settings['norm'] = colors.Normalize(vmin=-500., vmax=500.)
-    map.peek()
+    #map.peek()
     # fsz = 5
     # f, (ax) = plt.subplots(1, figsize=[fsz, fsz])
     # ax.set_xlabel('X (pixels)')
@@ -100,7 +102,8 @@ def plot_map(fits,folder):
     # axpos = ax.get_position()
     # dpi = map.data.shape[0] / (axpos.x1 - axpos.x0) / fsz
     # plt.savefig(folder+'aia-figsave.png', dpi=dpi)
+    return map
 
 
 if __name__ == '__main__':
-    main()
+    ar_readmag()
