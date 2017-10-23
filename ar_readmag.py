@@ -92,7 +92,7 @@ def plot_map(fits, folder):
     if map.meta['naxis1']==4096:
         map = map.resample(u.Quantity([1024, 1024], u.pixel))
     ## Normalise
-    map.plot_settings['norm'] = colors.Normalize(vmin=-500., vmax=500.)
+    #map.plot_settings['norm'] = colors.Normalize(vmin=-500., vmax=500.)
     #map.peek()
     # fsz = 5
     # f, (ax) = plt.subplots(1, figsize=[fsz, fsz])
@@ -102,6 +102,7 @@ def plot_map(fits, folder):
     # axpos = ax.get_position()
     # dpi = map.data.shape[0] / (axpos.x1 - axpos.x0) / fsz
     # plt.savefig(folder+'aia-figsave.png', dpi=dpi)
+
     return map
 
 
