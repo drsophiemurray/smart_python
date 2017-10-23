@@ -1,29 +1,61 @@
+'''
+    First created 2017-09-15
+    Sophie A. Murray
 
-# params needed for config file
-#Magnetogram Processing
-cosmicthresh = 5000.  # A hard threshold for detecting cosmic rays
+    Python Version:    Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
+
+    Description:
+    Process HMI magnetogram for running with SMART algorithm.
+    Adapted from ar_processmag.pro originally written by P. Higgins
+
+    Notes:
+    -sunpy.wcs has been deprecated and needs to be replaced
+    -there has to be a better way for median filtering a.l.a filer_image.pro
+
+'''
 
 import numpy as np
+import scipy
 from scipy import interpolate
+import sunpy.wcs.wcs as wcs
+from configparser import ConfigParser
+import sunpy.map
+import astropy.units as u
 
 def ar_processmag(map):
-    """...
+    """Load input paramters, remove cosmic rays and NaNs,
+    then make all off-limb pixels zero, and clean up limb,
+    rotate map and do a cosine correction.
     """
-    # already floats in numpy data array so skipped first line converting double to float
+    ## Load configuration file
+    config = ConfigParser()
+    config.read("config.ini")
+    # Already floats in numpy data array so skipped first line converting double to float
     imgsz = len(map.data) #not 1024 x 1024 like idl
-    # didnt load parameters - need to add to config file
-    # indextag didnt bother with
-    data = cosmicthresh_remove(map.data)
+    # Didnt load parameters - need to add to config file
+    # Didnt bother with indextag
+    data = cosmicthresh_remove(map.data, np.float(config.get('processing', 'cosmicthresh')))
     # Clean NaNs - Higgo used bilinear interpoaltion
-    data = nan_remove(data)
+    data = remove_nans(data)
     # Clean edge - make all pixels off limb equal to 0. -- commented out as done during nan removal above!
     # map.data = edge_remove(map.data)
+    # Rotate
+    map = sunpy.map.Map(data, map.meta)
+    map = map.rotate(angle=map.meta['crota2']*u.deg)
     # Cosine map
-    cosmap, limbmask = ar_cosmap(map)
-    # Add property to map object
-    new_map = sunpy.map.Map(data, map.meta)
+    cosmap, rrdeg, limbmask = ar_cosmap(map)
+    # Remove limb issues
+    data, limbmask = fix_limb(map.data, rrdeg, limbmask)
+    # Median filter noisy values -- TO DO: do it properly like Higgo - check sunpy stuff - also commented as not used in main program
+    # data = median_filter(data, np.float(config.get('processing', 'medfiltwidth')))
+    map = sunpy.map.Map(data, map.meta)
+    # Magnetic field cosine correction
+    data, cosmap = cosine_correction(map, cosmap)
+    map = sunpy.map.Map(data, map.meta)
+    # Rotate solar norh = up -  dont get why Higgo is doing this so I'm going to ignore it!
+    return map, cosmap, limbmask
 
-def cosmicthresh_remove(data):
+def cosmicthresh_remove(data, cosmicthresh):
     """
     Search for cosmic rays using hard threshold defined in config file.
     Remove if greater than 3sigma detection than neighbooring pixels
@@ -45,7 +77,7 @@ def cosmicthresh_remove(data):
                 data[wcx[i], wcy[i]] = np.mean(data[wcx_neighbours, wcy_neighbours])
         return data
 
-def nan_remove(array):
+def remove_nans(array):
     """
     Clean NaNs
     Includes zero-value as 'missing'
@@ -82,30 +114,67 @@ def ar_cosmap(map):
     ;optionally output:	rrdeg = gives degrees from disk center
     ;					wcs = wcs structure from input map file
     ;					offlimb = map of 1=on-disk and 0=off-disk
-    ;					edgefudge = take off an extra half percent from the disk to get rid of limb effects
     """
-    return cosmap, limbmask
+    # take off an extra half percent from the disk to get rid of limb effects
+    fudge=0.999
+    #
+    # get helioprojective_coordinates
+    xx, yy = wcs.convert_pixel_to_data(map.data.shape,
+                                                   [map.meta["CDELT1"], map.meta["CDELT2"]],
+                                                   [map.meta["CRPIX1"], map.meta["CRPIX2"]],
+                                                   [map.meta["CRVAL1"], map.meta["CRVAL2"]])
+    rr = ((xx**2.) + (yy**2.))**(0.5)
+    #
+    coscor = rr
+    rrdeg = np.arcsin(coscor / map.meta["RSUN_OBS"])
+    coscor = 1. / np.cos(rrdeg)
+    wgt = np.where(rr > (map.meta["RSUN_OBS"]*fudge))
+    coscor[wgt] = 1.
+    #
+    offlimb = rr
+    wgtrr = np.where(rr >= (map.meta["RSUN_OBS"]*fudge))
+    offlimb[wgtrr] = 0.
+    wltrr = np.where(rr < (map.meta["RSUN_OBS"]*fudge))
+    offlimb[wltrr] = 1.
+    #
+    #below is from Sam's code
+    # hcc_x, hcc_y, hcc_z = wcs.convert_hpc_hcc(x_coords, y_coords,
+    #                                           dsun_meters=map.meta["DSUN_OBS"],
+    #                                           z=True)
+    # cosmap = cv2.normalize(hcc_z, None, 0, 1, cv2.NORM_MINMAX)
+    return coscor, rrdeg, offlimb
 
-def offlimb(data, limbmask):
+def fix_limb(data, rrdeg, limbmask):
     """
     zero off-limb pixels
     zero from 80 degrees to LOS
+    this is making the edge a bit smaller
     """
+    maxlimb = 80.
+    wofflimb = np.where(((rrdeg/(2.*np.pi))*360.) > maxlimb)
+    data[wofflimb] = 0.
+    limbmask[wofflimb] = 0.
+    return data*limbmask, limbmask
 
-def median_filter():
+def median_filter(data, medfiltwidth):
     """
     Median filter noisy values
-    Do a 3x3 median filter
+    http://docs.sunpy.org/en/stable/generated/gallery/image_bright_regions_gallery_example.html
     """
+    return scipy.ndimage.gaussian_filter(data, medfiltwidth)
 
-def cosine_correction():
+def cosine_correction(map, cosmap):
     """
     Do magnetic field cosine correction
     Limit correction to having 1 pixel at edge of the Sun
+    This is the maximum factor of pixel area covered by a single pixel at the solar limb as compared with at disk centre
     """
+    thetalim = np.arcsin(1. - map.meta["CDELT1"] / map.meta["RSUN_OBS"])
+    coscorlim = 1. / np.cos(thetalim)
+    cosmaplim = np.where((cosmap) > coscorlim)
+    cosmap[cosmaplim] = coscorlim
+    return map.data*cosmap, cosmap
 
-def solar_rot():
-    """
-    ;Rotate solar north = up
-    """
 
+if __name__ == '__main__':
+    ar_processmag()
