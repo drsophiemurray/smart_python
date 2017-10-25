@@ -42,6 +42,7 @@ def ar_processmag(map):
     # Rotate
     map = sunpy.map.Map(data, map.meta)
     map = map.rotate(angle=map.meta['crota2']*u.deg)
+    map.meta['crota2']=0.
     # Cosine map
     cosmap, rrdeg, limbmask = ar_cosmap(map)
     # Remove limb issues
@@ -52,7 +53,6 @@ def ar_processmag(map):
     # Magnetic field cosine correction
     data, cosmap = cosine_correction(map, cosmap)
     map = sunpy.map.Map(data, map.meta)
-    # Rotate solar norh = up -  dont get why Higgo is doing this so I'm going to ignore it!
     return map, cosmap, limbmask
 
 def cosmicthresh_remove(data, cosmicthresh):
