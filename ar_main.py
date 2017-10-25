@@ -1,5 +1,6 @@
-from ar_readmag import ar_readmag
+#from ar_readmag import ar_readmag
 from ar_processmag import ar_processmag
+from ar_detect import ar_detect
 import sunpy
 
 # First load the data
@@ -16,7 +17,8 @@ magproc, cosmap, limbmask = ar_processmag(map)
 
 #Create AR masks
 
-thissm = ar_detect(magproc, params = params, status = smartstatus, $
-                        cosmap = cosmap, limbmask = limbmask) ;prob dont need this?
+thissm = ar_detect(magproc, limbmask)
 
-
+import matplotlib.pylab as plt
+plt.ion()
+plt.imshow(thissm.data)
