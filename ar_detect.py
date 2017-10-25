@@ -50,16 +50,16 @@ def ar_detect(map, limbmask):
     fragmask = np.zeros(sz)
     wfrag = np.where(np.abs(map.data) >  magthresh)
     fragmask[wfrag] = 1.
-    smfragmask = ar_grow(fragmask, smoothwhm/2.)
+    smfragmask = ar_grow(fragmask, smoothwhm/2., gauss=False)
     ## Region grow the smooth detections
     poismask = np.where(mask == 1.)
     # wgrow=region_grow(smfragmask,poismask,thresh=[0.5,1.5]) #array, where to grow, threshold between which new region should fall
     #  DO SOMETHING!!!
     grmask = mask
-    grmask[wgrow] = 1
+    #grmask[wgrow] = 1
     ## Mask offlimb pixels
     grmask = grmask*limbmask
-    ## Return to full resolution
+    ## Return to 1s and 0s
     grmask[np.where(grmask < 0.5)] = 0.
     grmask[np.where(grmask >= 0.5)] = 1.
     ## Separate the detections by assigning numbers
@@ -71,7 +71,8 @@ def ar_detect(map, limbmask):
     rank = np.argsort(-arnpix[0])
     for i in range(nar):
         maskorder[np.where(maskfull == rank[i])] = i
-    return maskfull
+    maskmap = sunpy.map.Map(maskorder, map.meta)
+    return maskmap
 
 
 def gauss_smooth(map, rsgrad, cmpmm):
@@ -79,7 +80,7 @@ def gauss_smooth(map, rsgrad, cmpmm):
     """
     ## Get smoothing Gaussian kernel HWHM
     smoothwhm = (rsgrad*cmpmm)/ar_pxscale(map)
-    datasm = ar_grow_gaussian(map.data, smoothwhm) #to do: make gaussian an option
+    datasm = ar_grow(map.data, smoothwhm, gauss=True) #to do: make gaussian an option
     return datasm, smoothwhm
 
 def ar_pxscale(map):
@@ -93,7 +94,7 @@ def ar_pxscale(map):
     retmmppx = (map.meta["CDELT1"]/map.meta["RSUN_OBS"])*rsunmm # Mm/px
     return retmmppx*1e16
 
-def ar_grow_test(data, fwhm, gauss):
+def ar_grow(data, fwhm, gauss):
     """
     Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
     Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
@@ -136,72 +137,6 @@ def ar_grow_test(data, fwhm, gauss):
         else:
             print("ar_grow: kernel is too big compared to image!")
             return data
-
-def ar_grow_gaussian(data, fwhm):
-    """
-    Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
-    Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
-    The convolution stucture will fall off as a gaussian.
-    Notes:
-    1. For nice circular kernel binary kernel, width of kernel mask will be 2*radius+1, with a 1px boundary of 0 around the outside.
-    2. Setting radius to 1 will result in a 3x3 structuring element for binary kernels, with a total array size of 5x5
-    # TO DO: MAKE GAUSSIAN BELOW AN OPTION
-    """
-    gsig = fwhm / (np.sqrt(2. * np.log(2.)))
-    imgsz=(int(4. * fwhm), int(4. * fwhm))
-    struc = np.zeros(imgsz)
-    ## Generate coordinate maps
-    xcoord, ycoord, rcoord = xyrcoord(imgsz)
-    struc[np.where(rcoord <= fwhm)] = 1.
-    ## Crop to the edges of kernel with 1px boundary
-    wxbound = ((np.min(np.where(struc.sum(axis=1))), np.max(np.where(struc.sum(axis=1)))))
-    wybound = ((np.min(np.where(struc.sum(axis=0))), np.max(np.where(struc.sum(axis=0)))))
-    struc = struc[(wxbound[0]-1):(wxbound[1] + 2),(wybound[0]-1):(wybound[1]+2)]
-    struc[np.where(np.isnan(struc))] = 0.
-    outkernal = struc
-    ## Get Gaussian
-    mu = 0. #mean
-    # max = 1.
-    gstruc = gaussian(rcoord, mu, gsig)
-    ## Normalize gstruc so that the volume is 1
-    gstruc = gstruc/gstruc.sum()
-    gstruc[np.where(np.isnan(gstruc))] = 0.
-    outkernal = gstruc
-    ## Convolve
-    if (np.min(data.shape) > np.min(gstruc.shape)):
-        return convolution2d(data, outkernal)
-    else:
-        print("ar_grow: kernel is too big compared to image!")
-        return data
-
-def ar_grow(data, fwhm):
-    """
-    Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
-    Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
-    The convolution stucture will fall off as a gaussian.
-    Notes:
-    1. For nice circular kernel binary kernel, width of kernel mask will be 2*radius+1, with a 1px boundary of 0 around the outside.
-    2. Setting radius to 1 will result in a 3x3 structuring element for binary kernels, with a total array size of 5x5
-    # TO DO: MAKE GAUSSIAN BELOW AN OPTION
-    """
-    gsig = fwhm / (np.sqrt(2. * np.log(2.)))
-    imgsz=(int(4. * fwhm), int(4. * fwhm))
-    struc = np.zeros(imgsz)
-    ## Generate coordinate maps
-    xcoord, ycoord, rcoord = xyrcoord(imgsz)
-    struc[np.where(rcoord <= fwhm)] = 1.
-    ## Crop to the edges of kernel with 1px boundary
-    wxbound = ((np.min(np.where(struc.sum(axis=1))), np.max(np.where(struc.sum(axis=1)))))
-    wybound = ((np.min(np.where(struc.sum(axis=0))), np.max(np.where(struc.sum(axis=0)))))
-    struc = struc[(wxbound[0]-1):(wxbound[1] + 2),(wybound[0]-1):(wybound[1]+2)]
-    struc[np.where(np.isnan(struc))] = 0.
-    outkernal = struc
-    ## Convolve
-    if (np.min(data.shape) > np.min(struc.shape)):
-        return scipy.ndimage.morphology.binary_dilation(data, structure=outkernal).astype(data.dtype)
-    else:
-        print("ar_grow: kernel is too big compared to image!")
-        return data
 
 def xyrcoord(imgsz):
     """
