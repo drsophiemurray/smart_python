@@ -22,6 +22,8 @@
 
 import numpy as np
 from sunpy.sun import constants
+import sunpy.map
+import scipy
 
 status=-1
 
@@ -45,22 +47,21 @@ def ar_detect(map):
     wmask = np.where(np.abs(datasm) > smooththresh)
     mask[wmask] = 1.
     ## Segment the non-smoothed magnetogram to grab near by fragments and connect adjacent blobs
-    fragmask = maskmap.data
+    fragmaskmap = sunpy.map.Map(np.zeros(sz), map.meta)
+    fragmask = fragmaskmap.data
     wfrag = np.where(np.abs(map.data) >  magthresh)
     fragmask[wfrag] = 1.
-    smfragmask = ar_grow(fragmask, smoothhwhm/2.)
+    smfragmask = ar_grow(fragmask, smoothwhm/2.)
     ## Region grow the smooth detections
     poismask = np.where(mask = 1.)
-    .........
 
 def gauss_smooth(map, rsgrad, cmpmm):
     """Gaussian smooth the magnetogram
     """
     ## Get smoothing Gaussian kernel HWHM
     smoothwhm = (rsgrad*cmpmm)/ar_pxscale(map)
-    datasm = ar_grow(map.data, smoothwhm) #to do: make gaussian an option
+    datasm = ar_grow_gaussian(map.data, smoothwhm) #to do: make gaussian an option
     return datasm, smoothwhm
-
 
 def ar_pxscale(map):
     """Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
@@ -73,7 +74,7 @@ def ar_pxscale(map):
     retmmppx = (map.meta["CDELT1"]/map.meta["RSUN_OBS"])*rsunmm # Mm/px
     return retmmppx*1e16
 
-def ar_grow(data, fwhm):
+def ar_grow_gaussian(data, fwhm):
     """
     Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
     Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
@@ -106,6 +107,35 @@ def ar_grow(data, fwhm):
     ## Convolve
     if (np.min(data.shape) > np.min(gstruc.shape)):
         return convolution2d(data, outkernal)
+    else:
+        print("ar_grow: kernel is too big compared to image!")
+        return arr0
+
+def ar_grow(data, fwhm):
+    """
+    Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
+    Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
+    The convolution stucture will fall off as a gaussian.
+    Notes:
+    1. For nice circular kernel binary kernel, width of kernel mask will be 2*radius+1, with a 1px boundary of 0 around the outside.
+    2. Setting radius to 1 will result in a 3x3 structuring element for binary kernels, with a total array size of 5x5
+    # TO DO: MAKE GAUSSIAN BELOW AN OPTION
+    """
+    gsig = fwhm / (np.sqrt(2. * np.log(2.)))
+    imgsz=(int(4. * fwhm), int(4. * fwhm))
+    struc = np.zeros(imgsz)
+    ## Generate coordinate maps
+    xcoord, ycoord, rcoord = xyrcoord(imgsz)
+    struc[np.where(rcoord <= fwhm)] = 1.
+    ## Crop to the edges of kernel with 1px boundary
+    wxbound = ((np.min(np.where(struc.sum(axis=1))), np.max(np.where(struc.sum(axis=1)))))
+    wybound = ((np.min(np.where(struc.sum(axis=0))), np.max(np.where(struc.sum(axis=0)))))
+    struc = struc[(wxbound[0]-1):(wxbound[1] + 2),(wybound[0]-1):(wybound[1]+2)]
+    struc[np.where(np.isnan(struc))] = 0.
+    outkernal = struc
+    ## Convolve
+    if (np.min(data.shape) > np.min(struc.shape)):
+        return scipy.ndimage.morphology.binary_dilation(data, structure=outkernal)
     else:
         print("ar_grow: kernel is too big compared to image!")
         return arr0
