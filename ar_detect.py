@@ -25,38 +25,55 @@ from sunpy.sun import constants
 
 status=-1
 
-#Physics
+#params
 cmpmm =  1e16 #Number centimeters in a mega meter
 smoothphys = 16. #Physical gaussian smoothing HWHM in Mm. The radius of a characteristic supergranule
+smooththresh = 15.0 # a segmentation threshold used in processing magnetograms (for 1kx1k gaussian smoothed; determined from plot_hmi_crosscal_resid.pro by comparing HMI and MDI detection masks)
+magthresh =  350.0 #a secondary segmentation threshold (for MDI) used to find all flux fragments in an image
 
 
 def ar_detect(map):
     """
     """
-    szorig = map.data.shape
-    # initialise blank mask map
-    maskmap = sunpy.map.Map(np.zeros(szorig), map.meta)
-
+    sz = map.data.shape
+    ## Initialise blank mask map
+    maskmap = sunpy.map.Map(np.zeros(sz), map.meta)
+    ## Gaussian smoothing
+    datasm, smoothwhm = gauss_smooth(map, smoothphys, cmpmm)
+    ## Make a mask of detections
+    mask = maskmap.data
+    wmask = np.where(np.abs(datasm) > smooththresh)
+    mask[wmask] = 1.
+    ## Segment the non-smoothed magnetogram to grab near by fragments and connect adjacent blobs
+    fragmask = maskmap.data
+    wfrag = np.where(np.abs(map.data) >  magthresh)
+    fragmask[wfrag] = 1.
+    smfragmask = ar_grow(fragmask, smoothhwhm/2.)
+    ## Region grow the smooth detections
+    poismask = np.where(mask = 1.)
+    .........
 
 def gauss_smooth(map, rsgrad, cmpmm):
     """Gaussian smooth the magnetogram
     """
-    # Get smoothing Gaussian kernel HWHM
-    ssmoothwhm = (rsgrad*cmpmm)/ar_pxscale(map)
-    datasm = ar_grow(map.data, smoothhwhm)
+    ## Get smoothing Gaussian kernel HWHM
+    smoothwhm = (rsgrad*cmpmm)/ar_pxscale(map)
+    datasm = ar_grow(map.data, smoothwhm) #to do: make gaussian an option
+    return datasm, smoothwhm
+
 
 def ar_pxscale(map):
     """Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
     """
-    #Area of pixel in Mm^2
+    ## Area of pixel in Mm^2
     rsunmm = constants.get('radius').value/1e6
     mmperarcsec = rsunmm/map.meta["RSUN_OBS"] # Mm/arcsec
     pixarea = ((map.meta["CDELT1"] * mmperarcsec) * (map.meta["CDELT2"] * mmperarcsec)) # Mm^2
-    #Length of a side of a pixel
+    ## Length of a side of a pixel
     retmmppx = (map.meta["CDELT1"]/map.meta["RSUN_OBS"])*rsunmm # Mm/px
     return retmmppx*1e16
 
-def ar_grow(arr):
+def ar_grow(data, fwhm):
     """
     Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
     Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
@@ -64,22 +81,34 @@ def ar_grow(arr):
     Notes:
     1. For nice circular kernel binary kernel, width of kernel mask will be 2*radius+1, with a 1px boundary of 0 around the outside.
     2. Setting radius to 1 will result in a 3x3 structuring element for binary kernels, with a total array size of 5x5
+    # TO DO: MAKE GAUSSIAN BELOW AN OPTION
     """
-    arr0 = arr
-    fwhm = radius0 = 5.
     gsig = fwhm / (np.sqrt(2. * np.log(2.)))
-    imgsz=(int(4. * radius0), int(4. * radius0))
+    imgsz=(int(4. * fwhm), int(4. * fwhm))
     struc = np.zeros(imgsz)
-    # Generate coordinate maps
+    ## Generate coordinate maps
     xcoord, ycoord, rcoord = xyrcoord(imgsz)
-    struc[np.where(rcoord <= radius0)] = 1.
-    # Crop to the edges of kernel with 1px boundary
+    struc[np.where(rcoord <= fwhm)] = 1.
+    ## Crop to the edges of kernel with 1px boundary
     wxbound = ((np.min(np.where(struc.sum(axis=1))), np.max(np.where(struc.sum(axis=1)))))
     wybound = ((np.min(np.where(struc.sum(axis=0))), np.max(np.where(struc.sum(axis=0)))))
-    test=struc[(wxbound[0]-1):(wxbound[1] + 2),(wybound[0]-1):(wybound[1]+2)]
-
-    # column total
-     # row total
+    struc = struc[(wxbound[0]-1):(wxbound[1] + 2),(wybound[0]-1):(wybound[1]+2)]
+    struc[np.where(np.isnan(struc))] = 0.
+    outkernal = struc
+    ## Get Gaussian
+    mu = 0. #mean
+    # max = 1.
+    gstruc = gaussian(rcoord, mu, gsig)
+    ## Normalize gstruc so that the volume is 1
+    gstruc = gstruc/gstruc.sum()
+    gstruc[np.where(np.isnan(gstruc))] = 0.
+    outkernal = gstruc
+    ## Convolve
+    if (np.min(data.shape) > np.min(gstruc.shape)):
+        return convolution2d(data, outkernal)
+    else:
+        print("ar_grow: kernel is too big compared to image!")
+        return arr0
 
 def xyrcoord(imgsz):
     """
@@ -90,3 +119,21 @@ def xyrcoord(imgsz):
     rcoord = np.sqrt((xcoord - imgsz[0] / 2.)**2. + (ycoord - imgsz[1] / 2.)**2)
     return xcoord, ycoord, rcoord
 
+def gaussian(x, mu, sig):
+    """
+    """
+    return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
+def convolution2d(image, kernel):
+    """TO DO: scipy.signal.convolve2d
+    """
+    m, n = kernel.shape
+    if (m == n):
+        y, x = image.shape
+        y = y - m + 1
+        x = x - m + 1
+        new_image = np.zeros((y,x))
+        for i in range(y):
+            for j in range(x):
+                new_image[i][j] = np.sum(image[i:i+m, j:j+m]*kernel)
+    return new_image
