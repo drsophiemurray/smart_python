@@ -25,6 +25,8 @@ from sunpy.sun import constants
 import sunpy.map
 import scipy
 from skimage import measure
+from scipy import ndimage as nd
+from skimage.morphology import watershed
 
 status=-1
 
@@ -42,7 +44,7 @@ def ar_detect(map, limbmask):
     ## Initialise blank mask map
     mask = np.zeros(sz)
     ## Gaussian smoothing
-    datasm, smoothwhm = gauss_smooth(map, smoothphys, cmpmm)
+    datasm, smoothhwhm = gauss_smooth(map, smoothphys, cmpmm)
     ## Make a mask of detections
     wmask = np.where(np.abs(datasm) > smooththresh)
     mask[wmask] = 1.
@@ -50,16 +52,19 @@ def ar_detect(map, limbmask):
     fragmask = np.zeros(sz)
     wfrag = np.where(np.abs(map.data) >  magthresh)
     fragmask[wfrag] = 1.
-    smfragmask = ar_grow(fragmask, smoothwhm/2., gauss=False)
+    smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False)
     ## Region grow the smooth detections
     poismask = np.where(mask == 1.)
     # wgrow=region_grow(smfragmask,poismask,thresh=[0.5,1.5]) #array, where to grow, threshold between which new region should fall
-    #  DO SOMETHING!!!
-    grmask = mask
+    #grmask = mask
     #grmask[wgrow] = 1
+    # https://stackoverflow.com/questions/31848309/classifying-python-array-by-nearest-seed-region
+    #distance = nd.distance_transform_edt(smfragmask)
+    #grmask = watershed(distance, mask, mask=smfragmask)
+    grmask = watershed(sobel(smfragmask), mask, mask=smfragmask)
     ## Mask offlimb pixels
     grmask = grmask*limbmask
-    ## Return to 1s and 0s
+    ## Return to 1s and 0s ndi.binary_fill_holes(segmentation - 1)
     grmask[np.where(grmask < 0.5)] = 0.
     grmask[np.where(grmask >= 0.5)] = 1.
     ## Separate the detections by assigning numbers
@@ -79,9 +84,9 @@ def gauss_smooth(map, rsgrad, cmpmm):
     """Gaussian smooth the magnetogram
     """
     ## Get smoothing Gaussian kernel HWHM
-    smoothwhm = (rsgrad*cmpmm)/ar_pxscale(map)
-    datasm = ar_grow(map.data, smoothwhm, gauss=True) #to do: make gaussian an option
-    return datasm, smoothwhm
+    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(map)
+    datasm = ar_grow(map.data, smoothhwhm, gauss=True) #to do: make gaussian an option
+    return datasm, smoothhwhm
 
 def ar_pxscale(map):
     """Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
