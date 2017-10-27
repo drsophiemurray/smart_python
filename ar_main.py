@@ -1,6 +1,8 @@
 #from ar_readmag import ar_readmag
 from ar_processmag import ar_processmag
 from ar_detect import ar_detect
+from ar_detect_core import ar_detect_core
+
 import sunpy
 
 # First load the data
@@ -22,4 +24,4 @@ thisar, pslmap = ar_detect_core(magproc, thissm.data)
 
 import matplotlib.pylab as plt
 plt.ion()
-plt.imshow(thissm.data)
+plt.imshow(thissm.data, origin='lower')
