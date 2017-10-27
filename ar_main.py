@@ -18,6 +18,7 @@ magproc, cosmap, limbmask = ar_processmag(map)
 #Create AR masks
 
 thissm = ar_detect(magproc, limbmask)
+thisar, pslmap = ar_detect_core(magproc, thissm.data)
 
 import matplotlib.pylab as plt
 plt.ion()
