@@ -23,6 +23,9 @@ from ar_detect import ar_pxscale, ar_grow
 from skimage.morphology import watershed
 import numpy as np
 from skimage.morphology import skeletonize
+from skimage import measure
+from skimage import filters
+import sunpy.map
 
 cmpmm =  1e16 #Number centimeters in a mega meter
 smoothphys = 16. #Physical gaussian smoothing HWHM in Mm. The radius of a characteristic supergranule
@@ -42,15 +45,15 @@ def ar_detect_core(map, smartmask):
     datasm = ar_grow(map.data, smoothhwhm, gauss=True)
     # Get ridge skeleton
     # use datasm, smooththresh
-    ridgemask = ?ar_ridgemask(abs(datasm),thresh=params.smooththresh)
+#    ridgemask = ?ar_ridgemask(abs(datasm),thresh=params.smooththresh)
     # Get PSL map
     # use datasm, smoothwhm, smooththresh
-    pslmask = ar_pslmask(datasm, smoothhwhm, smoothresh, skeleton=False)
-    wpsl = np.where((ridgemask + pslmask) == 2)
-    psltrace = np.zeros(sz)
-    psltrace[wpsl] = 1.
+    pslmask = ar_pslmask(datasm, smoothhwhm, smooththresh, skeleton=False)
+#    wpsl = np.where((ridgemask + pslmask) == 2)
+#    psltrace = np.zeros(sz)
+#    psltrace[wpsl] = 1.
     # Dilate PSL trace
-    pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False)
+#    pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False)
     # Make strong field masks
     wstrong = np.where(np.abs(map.data) > strongthresh)
     strongmask = np.zeros(sz)
@@ -61,9 +64,10 @@ def ar_detect_core(map, smartmask):
     strongblobmask = np.zeros(sz)
     strongblobmask[wstrongblob] = 1.
     # Trim the PSL blob array to where it overlaps with the strong blob array
-    pslblobmasktrim = strongblobmask * pslblobmask
+#    pslblobmasktrim = strongblobmask * pslblobmask
     # Region grow with PSL map as a base and strong field map as a kernel
-    arcoremask = watershed(sobel(pslblobmasktrim),strongblobmask, mask=pslblobmasktrim)
+#    arcoremask = watershed(filters.sobel(pslblobmasktrim),strongblobmask, mask=pslblobmasktrim)
+    arcoremask = strongblobmask #for now until get watershed fixed!!
     # Filter to only take multi polar detections -> if >95% of pixels (above strong field threshold) are of one polarity then disregard the detection.
     arcoremaskid = measure.label(arcoremask, background=0)
     nid = np.max(arcoremaskid)
@@ -91,12 +95,15 @@ def ar_detect_core(map, smartmask):
     # Make combined core and normal AR detection using region grow
     # identifies regions that are attached to AR cores
     smartmask = smartmask < 1.
-    arcoresmartcomb = watershed(sobel(smartmask), arcoremaskpole, mask=smartmask)
+    arcoresmartcomb = watershed(filters.sobel(smartmask), arcoremaskmpole, mask=smartmask)
     # Change the values to uniquely identify the ARs and blobs so that only 1 output mask needs to be saved
     arcoremaskfinal = smartmask + (arcoresmartcomb * 2.) + (arcoremaskmpoleid * 100.)
     # Output result
-    arcoremap = sunpy.map.Map(arcoremaskfinal, map.meta)
-    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, map.meta)
+#    arcoremap = sunpy.map.Map(arcoremaskfinal, map.meta)
+#    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, map.meta)
+    # for now until fix above
+    arcoremap = sunpy.map.Map(arcoremaskid, map.meta) #for now until fix above
+    pslmaskmap = sunpy.map.Map(skeletonize(pslmask), map.meta) #for now until fix above
     return arcoremap, pslmaskmap
 
 
@@ -105,8 +112,9 @@ def ar_ridgemask(data, thresh):
     determining the PSL mask, using a watershed transform
     """
     sz=data.shape
-    data[np.where(data<thresh)]=thresh
-
+    data[np.where(map.data<thresh)]=thresh
+    data=-data
+    return watershed(data, markers=8, connectivity=8)
 
 def ar_pslmask(data, radius, thresh, skeleton):
     """Create a PSL mask, given some LOS B input data.
@@ -132,3 +140,6 @@ def ar_pslmask(data, radius, thresh, skeleton):
         return skeletonize(outmask)
     else:
         return outmask
+
+if __name__ == '__main__':
+    ar_detect_core()
