@@ -132,7 +132,7 @@ def ar_grow(data, fwhm, gauss):
         outkernal = gstruc
         ## Convolve
         if (np.min(data.shape) > np.min(gstruc.shape)):
-            return convolution2d(data, outkernal)
+            return scipy.signal.convolve2d(data, outkernal, mode='same')
         else:
             print("ar_grow: kernel is too big compared to image!")
             return data
@@ -156,18 +156,3 @@ def gaussian(x, mu, sig):
     """
     """
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
-
-def convolution2d(image, kernel):
-    """TO DO: scipy.signal.convolve2d
-    """
-    m, n = kernel.shape
-    if (m == n):
-        y, x = image.shape
-        y = y - m + 1
-        x = x - m + 1
-        new_image = np.zeros((y,x))
-        for i in range(y):
-            for j in range(x):
-                new_image[i][j] = np.sum(image[i:i+m, j:j+m]*kernel)
-    return new_image
-
