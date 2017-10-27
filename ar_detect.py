@@ -27,6 +27,7 @@ import scipy
 from skimage import measure
 from scipy import ndimage as nd
 from skimage.morphology import watershed
+from skimage import filters
 
 status=-1
 
@@ -61,7 +62,7 @@ def ar_detect(map, limbmask):
     # https://stackoverflow.com/questions/31848309/classifying-python-array-by-nearest-seed-region
     #distance = nd.distance_transform_edt(smfragmask)
     #grmask = watershed(distance, mask, mask=smfragmask)
-    grmask = watershed(sobel(smfragmask), mask, mask=smfragmask)
+    grmask = watershed(filters.sobel(smfragmask), mask, mask=smfragmask)
     ## Mask offlimb pixels
     grmask = grmask*limbmask
     ## Return to 1s and 0s ndi.binary_fill_holes(segmentation - 1)
@@ -70,12 +71,7 @@ def ar_detect(map, limbmask):
     ## Separate the detections by assigning numbers
     maskfull = measure.label(grmask, background=0)
     ## Order the detections by number of pixels
-    nar = np.max(maskfull)
-    arnpix = np.histogram(maskfull, bins=range(nar+1))
-    maskorder = np.zeros(sz)
-    rank = np.argsort(-arnpix[0])
-    for i in range(nar):
-        maskorder[np.where(maskfull == rank[i])] = i
+    maskorder = ar_order_mask(maskfull, sz)
     maskmap = sunpy.map.Map(maskorder, map.meta)
     return maskmap
 
@@ -156,3 +152,18 @@ def gaussian(x, mu, sig):
     """
     """
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
+def ar_order_mask(maskfull, sz):
+    """
+    Order the detections by number of pixels
+    """
+    nar = np.max(maskfull)
+    arnpix = np.histogram(maskfull, bins=range(nar+1))
+    maskorder = np.zeros(sz)
+    rank = np.argsort(-arnpix[0])
+    for i in range(nar):
+        maskorder[np.where(maskfull == rank[i])] = i
+    return maskorder
+
+if __name__ == '__main__':
+    ar_detect()
