@@ -80,20 +80,27 @@ def gauss_smooth(map, rsgrad, cmpmm):
     """Gaussian smooth the magnetogram
     """
     ## Get smoothing Gaussian kernel HWHM
-    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(map)
+    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=True)
     datasm = ar_grow(map.data, smoothhwhm, gauss=True) #to do: make gaussian an option
     return datasm, smoothhwhm
 
-def ar_pxscale(map):
+def ar_pxscale(map, cmsqr, mmppx, cmppx):
     """Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
     """
     ## Area of pixel in Mm^2
     rsunmm = constants.get('radius').value/1e6
     mmperarcsec = rsunmm/map.meta["RSUN_OBS"] # Mm/arcsec
     pixarea = ((map.meta["CDELT1"] * mmperarcsec) * (map.meta["CDELT2"] * mmperarcsec)) # Mm^2
+    if cmsqr is True:
+        pixarea = pixarea*1e16
     ## Length of a side of a pixel
     retmmppx = (map.meta["CDELT1"]/map.meta["RSUN_OBS"])*rsunmm # Mm/px
-    return retmmppx*1e16
+    if cmppx is True:
+        return retmmppx*1e16
+    elif mmppx is True:
+        return retmmppx
+    else:
+        return pixarea
 
 def ar_grow(data, fwhm, gauss):
     """
@@ -144,7 +151,7 @@ def xyrcoord(imgsz):
     """
     rows = np.array(range(imgsz[0]))
     columns = np.array(range(imgsz[1]))
-    ycoord,xcoord = np.meshgrid(columns,rows)
+    ycoord,xcoord = np.meshgrid(columns,rows) #should i switch back? so confused!
     rcoord = np.sqrt((xcoord - imgsz[0] / 2.)**2. + (ycoord - imgsz[1] / 2.)**2)
     return xcoord, ycoord, rcoord
 
