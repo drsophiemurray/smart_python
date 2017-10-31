@@ -40,9 +40,9 @@ def ar_posprop(map, mask, cosmap):
           carlonbnd:0d,  carlonflx:0d,  carlonarea:0d, $
           xminbnd:0d, yminbnd:0d, xmaxbnd:0d, ymaxbnd:0d}
     """
-    pxmmsq =  ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=False)
-    pxcmsq = ar_pxscale(map, cmsqr=True, mmppx=False, cmppx=False)
-    nmask = np.max(mask)]
+#    pxmmsq =  ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=False)
+#    pxcmsq = ar_pxscale(map, cmsqr=True, mmppx=False, cmppx=False)
+    nmask = np.max(mask)
     #For each AR...
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside detection boundary
@@ -58,13 +58,13 @@ def ar_posprop(map, mask, cosmap):
         # Where are the signed values
 #        wneg = np.where(thisdat < 0.)
 #        wpos = np.where(thisdat > 0.)
-        # Fill the position structure for - whole detection
-        arstr? = ar_posprop_findpos(map, np.where(mask == i), thisflx)
-        # Fill position structure
-        ?? check differences in lists between posprop and findpos??
         # Same for positive and negative regions
         posstr? = ar_posprop_findpos(map, np.where(thisdat > 0), thisflx)
         negstr? = ar_posprop_findpos(map, np.where(thisdat < 0), thisflx)
+        # Fill the position structure for - whole detection
+        arstr? = ar_posprop_findpos(map, np.where(mask == i), thisflx)
+    # Fill position structure
+    ?? check differences in lists between posprop and findpos??
     return arstr, posstr, negstr
 
 def ar_posprop_findpos(map, war, data):
