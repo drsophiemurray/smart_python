@@ -31,6 +31,8 @@ import numpy as np
 import sunpy.map
 from ar_detect import xyrcoord
 from ar_posprop import px2hc, hc2hg
+from sunpy.sun import constants
+import pandas as pd
 
 def ar_pslprop(map, thismask, dproj, projmaxscale):
     """.arpslstr={arid:0,psllength:0.,pslsglength:0.,pslcurvature:0d,rvalue:0.,wlsg:0.,bipolesep_mm:0.,bipolesep_px:0.,bipolesep_proj:0.}
@@ -58,13 +60,23 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         #Convert to wcs structure??
         # Determine the bipole separation properties
         bipsepstr = ar_bipolesep(submag)
+        # Stereographic deprojection --- TO DO!!!!! DOPROJ=1
+        if doproj is False:
+            projpxscl = np.ones(sz)
+            projmag = np.copy(submag.data)
+            rim = np.copy(submag.data)
+            projmask = np.copy(submask.data)
+            bisepstrproj = bisepstrproj
+            proxpxscl_bsep = 1.
+
+
 
 
 def ar_bipolesep(map):
     """Determine the flux-weighted bipole separation distance between the pos and neg centroids
     ;in degrees if a map is input, or in Px if only an image is input
     """
-    image = map.data[::-1]
+    image = map.data
     imgsz = image.shape
     yy, xx, rr = xyrcoord(imgsz) #need to check this shit theres definitely something wrong - array flipped
     imageneg = np.copy(image)
@@ -75,21 +87,86 @@ def ar_bipolesep(map):
     nxpxloc = np.sum(xx * np.abs(imageneg)) / np.sum(np.abs(imageneg))
     pypxloc = np.sum(yy * imagepos) / np.sum(imagepos)
     nypxloc = np.sum(yy * np.abs(imageneg)) / np.sum(np.abs(imageneg))
-    pxsep = np.sum((pxpxloc-nxpxloc)^2.+(pypxloc-nypxloc)^2.)
+    pxsep = np.sqrt((pxpxloc-nxpxloc)**2.+(pypxloc-nypxloc)**2.)
     # Now the map outputs
     xc = map.meta["crval1"] + map.meta["cdelt1"]*(((map.meta["naxis1"] + 1)/2) - map.meta["crpix1"])
     yc = map.meta["crval2"] + map.meta["cdelt2"] * (((map.meta["naxis2"] + 1) / 2) - map.meta["crpix2"])
-    phcxflx, phcyflx = px2hc(pxpxloc, pypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz)
+    phcxflx, phcyflx = px2hc(pxpxloc, pypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
     phgxflx, phgyflx, carpxflx = hc2hg(map, phcxflx, phcyflx)
-    nhcxflx, nhcyflx = px2hc(nxpxloc, nypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz)
+    nhcxflx, nhcyflx = px2hc(nxpxloc, nypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
     nhgxflx, nhgyflx, carnxflx = hc2hg(map, nhcxflx, nhcyflx)
-# sepstr.plon = phgxflx
-# sepstr.plat = phgyflx
-# sepstr.nlon = nhgxflx
-# sepstr.nlat = nhgyflx
-    gc_dist(((phgxflx, phgyflx)), ((nhgxflx, nhgyflx)))
+    gcdist_deg, outeqnode,  outadist = gc_dist(np.array((phgxflx, phgyflx)), np.array((nhgxflx, nhgyflx)), nonan=False)
+    gcdist_mm = (gcdist_deg / 360.) * 2. * np.pi * (constants.radius.value / 1e6)
+    gcdist_px = (gcdist_deg / 360.) * 2. * np.pi * (submag.meta['rsun_obs'] / submag.meta['cdelt1'])
+    sepstr = {'pxcen': pxpxloc, 'pycen': pypxloc, 'nxcen': nxpxloc, 'nycen': nypxloc,
+              'plon': phgxflx, 'plat': phgyflx, 'nlon': nhgxflx, 'nlat': nhgyflx, 'pxsep': pxsep,
+              'gdist_deg': gcdist_deg, 'gcdist_mm': gcdist_mm, 'gcdist_px': gcdist_px}
+    return sepstr
 
-def gc_dist():
+def gc_dist(alonlat, blonlat, nonan):
+    """
+    Return the distance along the great circle between two reference points from Leonard (1953)
+    Coordinates are in geographic longitude latitude
+    alonlat: first reference point on great circle (GC), [longitude, latitude] in degrees
+    blonlat: second reference point on great circle (GC), [longitude, latitude] in degrees
+    OutEqNode: output the location of the nearest equatorial node to the reference point in degrees
+    OutADist: distance between reference point A and the equatorial node of the GC. in degrees
+    NoNaN: where ALONLAT is equal to BLONLAT GC_DIST will return a NaN. To replace the NaNs with 0, set /NoNaN
+    """
+    # Bit of a fudge apparently - looks like he doesnt want zeros
+    alonlat[np.where(alonlat == 0.)] = 0.001
+    blonlat[np.where(blonlat == 0.)] = 0.001
+    # Inclination between GC and equator
+    inc, nlonlat = gc_inc(alonlat, blonlat)
+    # Convert to radians
+    alonlat = np.radians(alonlat)
+    blonlat = np.radians(blonlat)
+    nlonlat = np.radians(nlonlat)
+    # Distance of equatorial node to point A along GC
+    da = np.arccos(np.cos(alonlat[0] - nlonlat) * np.cos(alonlat[1]))
+    outda = np.degrees(da)
+    db = np.arccos(np.cos(blonlat[0] - nlonlat) * np.cos(blonlat[1]))
+    # Distance between the two points
+    alatsign = alonlat[1] / np.abs(alonlat[1])
+    blatsign = blonlat[1] / np.abs(blonlat[1])
+    diffhemisign = alatsign * blatsign
+    dd = np.abs(da - db * diffhemisign)
+    # Find the mid point position between the two reference points
+    dmid = -(da + db)/2.
+    mlon = np.arctan(np.tan(dmid) * np.cos(inc)) + (nlonlat)
+    mlat = np.arctan(np.tan(inc) * np.sin(mlon - nlonlat))
+    mlonlat = np.array((mlon, mlat))
+    outmid = np.degrees(mlonlat)
+    if nonan is True:
+        if np.isnan(dd) is True:
+            dd = 0.
+    # Convert the distance to degrees
+    dist = np.degrees(dd)
+    # When distances go above 180deg they are wrong! Subtract from 360.
+    if (dist > 180.) is True:
+        dist = 360. - dist
+    return dist, outda, outmid
+
+def gc_inc(alonlat, blonlat):
+    """"
+    Returns the inclination between the arc connecting two reference points along a GC and the equator from Leonard 1953
+    Coordinates are in geographic longitude latitude
+    alonlat: first reference point on great circle (GC), [longitude, latitude] in degrees
+    blonlat: second reference point on great circle (GC), [longitude, latitude] in degrees
+    """
+    # Convert to radians
+    alonlat = np.radians(alonlat)
+    blonlat = np.radians(blonlat)
+    # Try to correct for problem when determining angles when A and B are on either side of the equator
+    lonshift = alonlat[0]
+    # Get position of equatorial node nearest to reference mid point between A and B
+    nlonlat = np.arctan( (np.sin(alonlat[0] - lonshift) * np.tan(blonlat[1]) - np.sin(blonlat[0] - lonshift) * np.tan(alonlat[1]))
+                      / (np.cos(alonlat[0] - lonshift) * np.tan(blonlat[1]) - np.cos(blonlat[0] - lonshift) * np.tan(alonlat[1])) ) + lonshift
+    #nlonlat = np.array((nlon, nlon.size-1)) #dont see why this is necessary so commenting out
+    nlonlat = np.degrees(nlonlat)
+    # Get inclination between GC and equator
+    inc = np.arctan(np.tan(alonlat[1]) / np.sin(alonlat[0] - nlonlat[0]))
+    return inc, nlonlat
 
 
 def pix_to_arc(map, x, y):
@@ -98,5 +175,3 @@ def pix_to_arc(map, x, y):
     arc_x = (x - (map.meta['crpix1'] - 1)) * map.meta['cdelt1'] + map.meta['crval1']
     arc_y = (y - (map.meta['crpix2'] - 1)) * map.meta['cdelt2'] + map.meta['crval2']
     return ((arc_x, arc_y))
-
-
