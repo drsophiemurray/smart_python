@@ -26,10 +26,12 @@
 # ;	1. If /DOPROJ is NOT set, then all outputs labeled 'STG projected' will just be in LOS (HCP) space, corresponding to the input map.
 
 projscl = 1.5 # F; the fractional increase/decrease in image size for the projected image
+mdi_noisethresh= 70.0 #; F; a noise threshold used in processing MDI magnetograms
+
 
 import numpy as np
 import sunpy.map
-from ar_detect import xyrcoord
+from ar_detect import xyrcoord, ar_grow
 from ar_posprop import px2hc, hc2hg
 from sunpy.sun import constants
 import pandas as pd
@@ -69,7 +71,7 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
             projmag = np.copy(submag.data)
             rim = np.copy(submag.data)
             projmask = np.copy(submask.data)
-            bisepstrproj = bisepstr
+            bisepstrproj = bipsepstr
             projpxscl_bpsep = 1.
         projsz = projmag.shape
         # Choose whether to use the Rdeg gradient or the bipole separation conversion to determine the projected pixel scaling
@@ -83,14 +85,27 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         kernsz = kernpsl.shape
         # Resize the kernel based on the scale conversion
         if (np.min(kernsz[0]/projpxscl_bpsep) < 1) or (np.isnan(np.min(kernsz[0]/projpxscl_bpsep)) is True)):
-            kernpsl=rebin(kernpsl, (kernsz[0], kernsz[1]))
+            kernpsl = rebin(kernpsl, (kernsz[0], kernsz[1]))
+        else:
+            factor = (kernsz[0]/projpxscl_bpsep)/kernsz[0]
+            kernpsl = scipy.ndimage.zoom(kernpsl, factor) #need to get congrid working but this will do for now
+        projmagg = ar_grow(projmag, 1, gauss = True)
+        psz = projmagg.shape
+        nmask = np.zeros(projmagg.shape)
+        pmask = np.copy(nmask)
+        nmask[np.where(projmagg < (-mdi_noisethresh*2))] = 1.
+        pmask[np.where(projmagg > mdi_noisethresh*2)] = 1.
+        pmaskg = ar_grow(pmask, 1./2., gauss=False, kern=kernpsl)
+        nmaskg = ar_grow(nmask, 1./2., gauss=False, kern=kernpsl)
+        pslmask = np.zeros(projmagg.shape)
+        pslmask[np.where(pmaskg + nmaskg == 2)] = 1.
 
 
 def ar_bipolesep(map):
     """Determine the flux-weighted bipole separation distance between the pos and neg centroids
     ;in degrees if a map is input, or in Px if only an image is input
     """
-    image = map.data
+    image = np.copy(map.data)
     imgsz = image.shape
     yy, xx, rr = xyrcoord(imgsz) #need to check this shit theres definitely something wrong - array flipped
     imageneg = np.copy(image)
@@ -103,7 +118,7 @@ def ar_bipolesep(map):
     nypxloc = np.sum(yy * np.abs(imageneg)) / np.sum(np.abs(imageneg))
     pxsep = np.sqrt((pxpxloc-nxpxloc)**2.+(pypxloc-nypxloc)**2.)
     # Now the map outputs
-    xc = map.meta["crval1"] + map.meta["cdelt1"]*(((map.meta["naxis1"] + 1)/2) - map.meta["crpix1"])
+    xc = map.meta["crval1"] + map.meta["cdelt1"]*(((map.meta["naxis1"] + 1) / 2) - map.meta["crpix1"])
     yc = map.meta["crval2"] + map.meta["cdelt2"] * (((map.meta["naxis2"] + 1) / 2) - map.meta["crpix2"])
     phcxflx, phcyflx = px2hc(pxpxloc, pypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
     phgxflx, phgyflx, carpxflx = hc2hg(map, phcxflx, phcyflx)
@@ -180,9 +195,10 @@ def gc_inc(alonlat, blonlat):
     #nlonlat = np.array((nlon, nlon.size-1)) #dont see why this is necessary so commenting out
     nlonlat = np.degrees(nlonlat)
     # Get inclination between GC and equator
-    inc = np.arctan(np.tan(alonlat[1]) / np.sin(alonlat[0] - nlonlat[0]))
+    inc = np.arctan(np.tan(alonlat[1]) / np.sin(alonlat[0] - nlonlat))
     return inc, nlonlat
 
+def ar_losgrad():
 
 def pix_to_arc(map, x, y):
     """Convert pixel location to arcsecond location in map
@@ -190,78 +206,3 @@ def pix_to_arc(map, x, y):
     arc_x = (x - (map.meta['crpix1'] - 1)) * map.meta['cdelt1'] + map.meta['crval1']
     arc_y = (y - (map.meta['crpix2'] - 1)) * map.meta['cdelt2'] + map.meta['crval2']
     return ((arc_x, arc_y))
-
-
-def rebin(array, dimensions=None, scale=None):
-    """ Return the array ``array`` to the new ``dimensions`` conserving flux the flux in the bins
-    The sum of the array will remain the same
- 
-    >>> ar = numpy.array([
-        [0,1,2],
-        [1,2,3],
-        [2,3,4]
-        ])
-    >>> rebin(ar, (2,2))
-    array([
-        [1.5, 4.5]
-        [4.5, 7.5]
-        ])
-    Raises
-    ------
- 
-    AssertionError
-        If the totals of the input and result array don't agree, raise an error because computation may have gone wrong
- 
-    Reference
-    =========
-    +-+-+-+
-    |1|2|3|
-    +-+-+-+
-    |4|5|6|
-    +-+-+-+
-    |7|8|9|
-    +-+-+-+
-    """
-    if dimensions is not None:
-        if isinstance(dimensions, float):
-            dimensions = [int(dimensions)] * len(array.shape)
-        elif isinstance(dimensions, int):
-            dimensions = [dimensions] * len(array.shape)
-        elif len(dimensions) != len(array.shape):
-            raise RuntimeError('')
-    elif scale is not None:
-        if isinstance(scale, float) or isinstance(scale, int):
-            dimensions = map(int, map(round, map(lambda x: x*scale, array.shape)))
-        elif len(scale) != len(array.shape):
-            raise RuntimeError('')
-    else:
-        raise RuntimeError('Incorrect parameters to rebin.\n\trebin(array, dimensions=(x,y))\n\trebin(array, scale=a')
-    print(dimensions)
-    print("Rebinning to Dimensions: %s, %s" % tuple(dimensions))
-    import itertools
-    dY, dX = map(divmod, map(float, array.shape), dimensions)
-    result = numpy.zeros(dimensions)
-    for j, i in itertools.product(*map(range, array.shape)):
-        (J, dj), (I, di) = divmod(j*dimensions[0], array.shape[0]), divmod(i*dimensions[1], array.shape[1])
-        (J1, dj1), (I1, di1) = divmod(j+1, array.shape[0]/float(dimensions[0])), divmod(i+1, array.shape[1]/float(dimensions[1]))
-        # Moving to new bin
-        # Is this a discrete bin?
-        dx,dy=0,0
-        if (I1-I == 0) | ((I1-I == 1) & (di1==0)):
-            dx = 1
-        else:
-            dx=1-di1
-        if (J1-J == 0) | ((J1-J == 1) & (dj1==0)):
-            dy=1
-        else:
-            dy=1-dj1
-        # Prevent it from allocating outide the array
-        I_=min(dimensions[1]-1,I+1)
-        J_=min(dimensions[0]-1,J+1)
-        result[J, I] += array[j,i]*dx*dy
-        result[J_, I] += array[j,i]*(1-dy)*dx
-        result[J, I_] += array[j,i]*dy*(1-dx)
-        result[J_, I_] += array[j,i]*(1-dx)*(1-dy)
-    allowError = 0.1
-    assert (array.sum() < result.sum() * (1+allowError)) & (array.sum() >result.sum() * (1-allowError))
-    return result
