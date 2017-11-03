@@ -28,6 +28,7 @@
 projscl = 1.5 # F; the fractional increase/decrease in image size for the projected image
 mdi_noisethresh = 70.0 #; F; a noise threshold used in processing MDI magnetograms
 psl_grad =  250. # F; a gradient threshold for determining the location of strong-gradient PSL
+r_kernsz = 10 # I; the FWHM of the smoothing kernal for calculating Schrijver R value
 
 
 import numpy as np
@@ -41,6 +42,9 @@ import scipy.ndimage
 import astropy.units as u
 from ar_processmag import remove_nans
 from skimage.morphology import skeletonize
+from skimage import measure
+from astropy.convolution import convolve, Box2DKernel
+
 
 def ar_pslprop(map, thismask, dproj, projmaxscale):
     """.arpslstr={arid:0,psllength:0.,pslsglength:0.,pslcurvature:0d,rvalue:0.,wlsg:0.,bipolesep_mm:0.,bipolesep_px:0.,bipolesep_proj:0.}
@@ -112,6 +116,29 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         pslmaskt = skeletonize(pslmask)
         pslmaskt_thresh = skeletonize(pslmaskthresh)
         # Find the largest segment of PSL and indicate terminals
+        pslmaslt_skel = skeletonize(ar_largest_blob(pslmask, gradpsl))
+        # Large commented out section skipped
+        # Determine the longest PSLs Skeleton length and curvature
+        pslcurvature = 0.
+        meanmmscl = np.mean(projmmscl)
+        psllength = np.sum(pslmaskt * projmmscl)
+        psllendatt = np.sum(pslmaskt_thresh * projmmscl) #strong
+        # Determine  R
+        # compute pos and neg polarity maps, with product defining polarity inversion line:
+        prim = np.copy(rim)
+        prim[np.where(rim < 150.)] = 0.
+        p1p = convolve(prim, Box2DKernel(3))
+        p1p[np.where(p1p > 0)] = 1.
+        nrim = np.copy(rim)
+        nrim[np.where(rim > -150.)] = 0.
+        p1n = convolve(nrim, Box2DKernel(3))
+        p1n[np.where(p1n < 0)] = 1.
+        pmap = ar_r_smear((p1p * p1n), r_kernsz)
+
+
+
+
+
 
 
 
@@ -233,7 +260,63 @@ def ar_largest_blob(mask, data):
     ;Returns MASK with all features zeroed except for the largest
     ;set flux to take the flux weighted largest blob
     """
-    
+    masksep = measure.label(mask, background=0)
+    ncont = np.max(masksep)
+    narr = np.zeros(ncont)
+    for i in range(1, np.int(ncont)+1):
+        narr[i - 1] = np.where(masksep == i)[0].size
+    wnbest = np.int((np.where(narr == np.max(narr)))[0] + 1.)
+    wbig = np.where(masksep == wnbest)
+    w0 = np.where(masksep != wnbest)
+    mask[w0] = 0.
+    return mask
+
+def ar_r_smear(image, szkernel):
+    """
+;+
+;  NAME:
+;    ar_r_smear
+;  PURPOSE:
+;    convolve an image with [default] a gaussian profile of FWHM width
+;    n and boxwidth 4n, or alternatively with a specified kernel
+;
+;  CALLING SEQUENCE:
+;    image=ar_r_smear(image,n,kernel=kernel)
+;
+;  INPUTS:
+;    image  image to be processed
+;    n      fwhm value of the gaussian smearing that is applied
+;
+;  OUTPUTS:
+;           returns convolved image
+;
+;  OPTIONAL INPUT KEYWORDS:
+;    kernal        convolution kernel, 2d real array
+;   [edge_truncate as in IDL routine convol - obsolete 2006/04/17, see below]
+;
+;  OPTIONAL OUTPUT KEYWORDS:
+;
+;  METHOD:
+;    uses standard IDL routine convol
+;
+;  MODIFICATION HISTORY:
+;	C.J. Shcrijver - 11-Feb-2014 - written
+;	P.A. Higgins - 12-Feb-2014 - modified using M. Bobra's suggestion (changed
+;		kernal width to 4*n+1 rather than 4n) and standardised code to fit
+;		within the SMART_LIBRARY repository:
+;		http://github.com/pohuigin/smart_library/
+;
+;-
+    """
+    n = szkernel
+    sigma = n / (2. * np.sqrt(2. * np.log(2.)))
+    kernel = np.zeros(np.int(4 * n + 1.))
+    for i in range(0, len(kernel)):
+        kernel[i] = np.exp(-(i-(2 * n - 0.5)) ** 2 / (2 * sigma ** 2))
+    kernel = np.outer(kernel, kernel)
+    kernel = kernel/np.sum(kernel)
+    return convolve(image, kernel)
+
 
 def pix_to_arc(map, x, y):
     """Convert pixel location to arcsecond location in map
