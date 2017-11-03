@@ -40,9 +40,9 @@ def ar_detect_core(map, smartmask):
     sz = map.data.shape
     maporig=mapmsk=map
     # the smoothing gaussian kernal HWHM
-    smoothhwhm=smoothphys*cmpmm/ar_pxscale(map)
+    smoothhwhm=smoothphys*cmpmm/ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=True)
     # Smooth the data (used for finding the PSL and PSL mask)
-    datasm = ar_grow(map.data, smoothhwhm, gauss=True)
+    datasm = ar_grow(map.data, smoothhwhm, gauss=True, kern=None)
     # Get ridge skeleton
     # use datasm, smooththresh
 #    ridgemask = ?ar_ridgemask(abs(datasm),thresh=params.smooththresh)
@@ -53,12 +53,12 @@ def ar_detect_core(map, smartmask):
 #    psltrace = np.zeros(sz)
 #    psltrace[wpsl] = 1.
     # Dilate PSL trace
-#    pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False)
+#    pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False, kern=None)
     # Make strong field masks
     wstrong = np.where(np.abs(map.data) > strongthresh)
     strongmask = np.zeros(sz)
     strongmask[wstrong]=1.
-    datastrongsm = ar_grow(np.abs(map.data*strongmask), smoothhwhm, gauss=True)
+    datastrongsm = ar_grow(np.abs(map.data*strongmask), smoothhwhm, gauss=True, kern=None)
     # Determine strong blob pixels
     wstrongblob = np.where(np.abs(datastrongsm) > smooththresh)
     strongblobmask = np.zeros(sz)
@@ -131,8 +131,8 @@ def ar_pslmask(data, radius, thresh, skeleton):
     posmask = np.zeros(sz)
     posmask[np.where(data > thresh)] = 1.
     # Dilate the polarity masks
-    negmaskgrow = ar_grow(negmask, radius, gauss=False)
-    posmaskgrow = ar_grow(posmask, radius, gauss=False)
+    negmaskgrow = ar_grow(negmask, radius, gauss=False, kern=None)
+    posmaskgrow = ar_grow(posmask, radius, gauss=False, kern=None)
     # Determine the overlap of the two masks
     outmask = np.zeros(sz)
     outmask[np.where((posmaskgrow + negmaskgrow)  == 2)] = 1.
@@ -140,6 +140,14 @@ def ar_pslmask(data, radius, thresh, skeleton):
         return skeletonize(outmask)
     else:
         return outmask
+
+def ar_core2mask(data):
+    """TO BE CONVERTED"""
+    core_mask = np.ceil( ( (data - 3.) > 0 ) / 100. )
+    smartmask = (data-core_mask*100.)<1.
+    smartconn = (data-core_mask*100.)>1.<2.
+    return coremask, np.ceil(smartmask), np.ceil(smartconn)
+
 
 if __name__ == '__main__':
     ar_detect_core()
