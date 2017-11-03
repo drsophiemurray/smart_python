@@ -53,7 +53,7 @@ def ar_detect(map, limbmask):
     fragmask = np.zeros(sz)
     wfrag = np.where(np.abs(map.data) >  magthresh)
     fragmask[wfrag] = 1.
-    smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False)
+    smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False, kern=None)
     ## Region grow the smooth detections
     poismask = np.where(mask == 1.)
     # wgrow=region_grow(smfragmask,poismask,thresh=[0.5,1.5]) #array, where to grow, threshold between which new region should fall
@@ -81,7 +81,7 @@ def gauss_smooth(map, rsgrad, cmpmm):
     """
     ## Get smoothing Gaussian kernel HWHM
     smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=True)
-    datasm = ar_grow(map.data, smoothhwhm, gauss=True) #to do: make gaussian an option
+    datasm = ar_grow(map.data, smoothhwhm, gauss=True, kern=None) #to do: make gaussian an option
     return datasm, smoothhwhm
 
 def ar_pxscale(map, cmsqr, mmppx, cmppx):
@@ -102,7 +102,7 @@ def ar_pxscale(map, cmsqr, mmppx, cmppx):
     else:
         return pixarea
 
-def ar_grow(data, fwhm, gauss):
+def ar_grow(data, fwhm, gauss, kern):
     """
     Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
     Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
@@ -122,6 +122,10 @@ def ar_grow(data, fwhm, gauss):
     wxbound = ((np.min(np.where(struc.sum(axis=1))), np.max(np.where(struc.sum(axis=1)))))
     wybound = ((np.min(np.where(struc.sum(axis=0))), np.max(np.where(struc.sum(axis=0)))))
     struc = struc[(wxbound[0]-1):(wxbound[1] + 2),(wybound[0]-1):(wybound[1]+2)]
+    if kern is None:
+        struc = struc
+    else:
+        struc = kern
     struc[np.where(np.isnan(struc))] = 0.
     outkernal = struc
     ## Get Gaussian
@@ -131,6 +135,10 @@ def ar_grow(data, fwhm, gauss):
         gstruc = gaussian(rcoord, mu, gsig)
         ## Normalize gstruc so that the volume is 1
         gstruc = gstruc/gstruc.sum()
+        if kern is None:
+            gstruc = gstruc
+        else:
+            gstruc = kern
         gstruc[np.where(np.isnan(gstruc))] = 0.
         outkernal = gstruc
         ## Convolve
