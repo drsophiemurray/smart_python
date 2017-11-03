@@ -26,7 +26,8 @@
 # ;	1. If /DOPROJ is NOT set, then all outputs labeled 'STG projected' will just be in LOS (HCP) space, corresponding to the input map.
 
 projscl = 1.5 # F; the fractional increase/decrease in image size for the projected image
-mdi_noisethresh= 70.0 #; F; a noise threshold used in processing MDI magnetograms
+mdi_noisethresh = 70.0 #; F; a noise threshold used in processing MDI magnetograms
+psl_grad =  250. # F; a gradient threshold for determining the location of strong-gradient PSL
 
 
 import numpy as np
@@ -38,6 +39,8 @@ import pandas as pd
 import scipy.interpolate
 import scipy.ndimage
 import astropy.units as u
+from ar_processmag import remove_nans
+from skimage.morphology import skeletonize
 
 def ar_pslprop(map, thismask, dproj, projmaxscale):
     """.arpslstr={arid:0,psllength:0.,pslsglength:0.,pslcurvature:0d,rvalue:0.,wlsg:0.,bipolesep_mm:0.,bipolesep_px:0.,bipolesep_proj:0.}
@@ -75,10 +78,12 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
             projpxscl_bpsep = 1.
         projsz = projmag.shape
         # Choose whether to use the Rdeg gradient or the bipole separation conversion to determine the projected pixel scaling
-        if dobppxscl is True:
-            projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl_bpsep
-        else:
-            projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl
+        #commented out below as dont get the point of it (seems to divide by itself later to equal zero)
+        #if dobppxscl is True:
+        #    projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl_bpsep
+        #else:
+        #    projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl
+        projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl_bpsep
         kernpsl = [[0, 0, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 1, 1, 1], [0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
         kernpsl = np.array(kernpsl)
@@ -99,6 +104,15 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         nmaskg = ar_grow(nmask, 1./2., gauss=False, kern=kernpsl)
         pslmask = np.zeros(projmagg.shape)
         pslmask[np.where(pmaskg + nmaskg == 2)] = 1.
+        gradmag = ar_losgrad(projmagg)
+        mapscl = ar_pxscale(map, cmsqr=False, mmppx=True, cmppx=False)
+        gradpsl = pslmask*gradmag*projmmscl/mapscl
+        pslmaskthresh = np.copy(pslmask)
+        pslmaskthresh[np.where(gradpsl < psl_grad)] = 0.
+        pslmaskt = skeletonize(pslmask)
+        pslmaskt_thresh = skeletonize(pslmaskthresh)
+        # Find the largest segment of PSL and indicate terminals
+
 
 
 def ar_bipolesep(map):
@@ -198,7 +212,28 @@ def gc_inc(alonlat, blonlat):
     inc = np.arctan(np.tan(alonlat[1]) / np.sin(alonlat[0] - nlonlat))
     return inc, nlonlat
 
-def ar_losgrad():
+def ar_losgrad(data):
+    """
+    Take the gradient in the horizontal plane of the LOS magnetic field.
+    """
+    # Buffer the image to reduce edge effects
+    imgsz = data.shape
+    dataint = np.zeros([imgsz[0]+10,imgsz[1]+10])
+    dataint[:] = np.nan
+    dataint[5:imgsz[0] + 5, 5:imgsz[1] + 5] = data
+    dataint = remove_nans(dataint)
+    xgrad = np.gradient(dataint)[1]
+    ygrad = np.gradient(dataint)[0] # np.rot90(np.gradient(np.rot90(dataint,3))[1])
+    gradmag = np.sqrt(xgrad**2. + ygrad**2.)
+    return gradmag[5:imgsz[0] + 5, 5:imgsz[1] + 5]
+
+def ar_largest_blob(mask, data):
+    """
+    ;Input MASK with 1=feature, 0=quiet
+    ;Returns MASK with all features zeroed except for the largest
+    ;set flux to take the flux weighted largest blob
+    """
+    
 
 def pix_to_arc(map, x, y):
     """Convert pixel location to arcsecond location in map
