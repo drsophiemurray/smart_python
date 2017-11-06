@@ -93,12 +93,12 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         kernpsl = np.array(kernpsl)
         kernsz = kernpsl.shape
         # Resize the kernel based on the scale conversion
-        if (np.min(kernsz[0]/projpxscl_bpsep) < 1) or (np.isnan(np.min(kernsz[0]/projpxscl_bpsep)) is True)):
+        if ((np.min(kernsz[0]/projpxscl_bpsep) < 1) is True) or (np.isnan(np.min(kernsz[0]/projpxscl_bpsep)) is True):
             kernpsl = rebin(kernpsl, (kernsz[0], kernsz[1]))
         else:
             factor = (kernsz[0]/projpxscl_bpsep)/kernsz[0]
             kernpsl = scipy.ndimage.zoom(kernpsl, factor) #need to get congrid working but this will do for now
-        projmagg = ar_grow(projmag, 1, gauss = True)
+        projmagg = ar_grow(projmag, 1, gauss = True, kern=None)
         psz = projmagg.shape
         nmask = np.zeros(projmagg.shape)
         pmask = np.copy(nmask)
@@ -122,7 +122,7 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         pslcurvature = 0.
         meanmmscl = np.mean(projmmscl)
         psllength = np.sum(pslmaskt * projmmscl)
-        psllendatt = np.sum(pslmaskt_thresh * projmmscl) #strong
+        psllengtht = np.sum(pslmaskt_thresh * projmmscl) #strong
         # Determine  R
         # compute pos and neg polarity maps, with product defining polarity inversion line:
         prim = np.copy(rim)
@@ -134,13 +134,27 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         p1n = convolve(nrim, Box2DKernel(3))
         p1n[np.where(p1n < 0)] = 1.
         pmap = ar_r_smear((p1p * p1n), r_kernsz)
-
-
-
-
-
-
-
+        rmap = pmap*np.abs(rim)
+        rmap[np.where(rmap < 0.)] = 1.
+        rmasked = rmap * projmask
+        rmasked[np.where(np.isnan(rmasked))] = 0.
+        thisr = np.sum(rmasked)
+        # DETERMINE SUMMED GRADIENT (WLsg)
+        wlsgdat = gradpsl * pslmask #thresh
+        wlsgdat[np.where(np.isnan(wlsgdat))] = 0.
+        thiswlsg = np.sum(wlsgdat)
+        # Fill structure
+        # thispslstr.arid = i
+        # thispslstr.psllength = psllength
+        # thispslstr.pslsglength = psllengtht
+        # thispslstr.pslcurvature = pslcurvature
+        # thispslstr.rvalue = thisr
+        # thispslstr.wlsg = thiswlsg
+        # thispslstr.bipolesep_mm = bipsepstr.gcdist_mm
+        # thispslstr.bipolesep_px = bipsepstr.gcdist_px
+        # thispslstr.bipolesep_proj = bipsepstrproj.pxsep
+        # arpslstr[i - 1] = thispslstr
+    return arpslstr
 
 def ar_bipolesep(map):
     """Determine the flux-weighted bipole separation distance between the pos and neg centroids
