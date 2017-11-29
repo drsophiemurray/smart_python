@@ -51,9 +51,9 @@ def ar_magprop(map, mask, cosmap):
         # Where positive values in boundary
         wposbnd = np.where(thisdat > 0)
         # Magnetic moments calculated for values within boundary [G]
-        bmax = np.max(thisdat[wval])
-        bmin = np.min(thisdat[wval])
-        bmean = np.mean(thisdat[wval])
+        bmax = np.max(thisdat[np.where(mask == i)])
+        bmin = np.min(thisdat[np.where(mask == i)])
+        bmean = np.mean(thisdat[np.where(mask == i)])
         # Area of detection boundary [Mm^2]
         areabnd = np.sum(cosmap * thismask * pxmmsq)
         posareabnd = np.sum(cosmap[wposbnd] * thismask[wposbnd] * pxmmsq)
