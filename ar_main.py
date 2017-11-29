@@ -3,6 +3,7 @@ from ar_processmag import ar_processmag
 from ar_detect import ar_detect
 from ar_detect_core import ar_detect_core
 from ar_posprop import ar_posprop
+from ar_magprop import ar_magprop
 import astropy.units as u
 import sunpy
 import matplotlib.pylab as plt
@@ -31,7 +32,7 @@ thismask = thisar.data
 #TO DO -ridgmask! Use skeleton for now maybe?
 #TO DO ar_core2mask thismask,smartmask,coresmartmask=ar_core2mask(thisar.data)
 posprop = ar_posprop(magproc, thismask, cosmap)
-#magprop=ar_magprop(magproc, thismask, cosmap)
+magprop = ar_magprop(magproc, thismask, cosmap)
 #pslprop=ar_pslprop(magproc, thismask, dproj=True, projmaxscale=1024)
 
 plt.ion()
