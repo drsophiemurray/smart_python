@@ -22,7 +22,7 @@ from configparser import ConfigParser
 import sunpy.map
 import astropy.units as u
 
-def ar_processmag(map):
+def ar_processmag(thismap):
     """Load input paramters, remove cosmic rays and NaNs,
     then make all off-limb pixels zero, and clean up limb,
     rotate map and do a cosine correction.
@@ -31,29 +31,30 @@ def ar_processmag(map):
     config = ConfigParser()
     config.read("config.ini")
     # Already floats in numpy data array so skipped first line converting double to float
-    imgsz = len(map.data) #not 1024 x 1024 like idl
+    imgsz = len(thismap.data) #not 1024 x 1024 like idl
     # Didnt load parameters - need to add to config file
     # Didnt bother with indextag
-    data = cosmicthresh_remove(map.data, np.float(config.get('processing', 'cosmicthresh')))
+    data = cosmicthresh_remove(thismap.data, np.float(config.get('processing', 'cosmicthresh')))
     # Clean NaNs - Higgo used bilinear interpoaltion
     data = remove_nans(data)
     # Clean edge - make all pixels off limb equal to 0. -- commented out as done during nan removal above!
-    # map.data = edge_remove(map.data)
-    # Rotate
-    map = sunpy.map.Map(data, map.meta)
-    map = map.rotate(angle=map.meta['crota2']*u.deg)
-    map.meta['crota2']=0.
+    # thismap.data = edge_remove(thismap.data)
     # Cosine map
-    cosmap, rrdeg, limbmask = ar_cosmap(map)
+    thismap = sunpy.map.Map(data, thismap.meta)
+    cosmap, rrdeg, limbmask = ar_cosmap(thismap)
     # Remove limb issues
-    data, limbmask = fix_limb(map.data, rrdeg, limbmask)
+    data, limbmask = fix_limb(thismap.data, rrdeg, limbmask)
     # Median filter noisy values -- TO DO: do it properly like Higgo - check sunpy stuff - also commented as not used in main program
     # data = median_filter(data, np.float(config.get('processing', 'medfiltwidth')))
-    map = sunpy.map.Map(data, map.meta)
+    thismap = sunpy.map.Map(data, thismap.meta)
     # Magnetic field cosine correction
-    data, cosmap = cosine_correction(map, cosmap)
-    map = sunpy.map.Map(data, map.meta)
-    return map, cosmap, limbmask
+    data, cosmap = cosine_correction(thismap, cosmap)
+    # Rotate
+    thismap = sunpy.map.Map(data, thismap.meta)
+    thismap = thismap.rotate(angle=int(thismap.meta['crota2'])*u.deg)
+    thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
+    thismap.meta['crota2']=0.
+    return thismap, cosmap, limbmask
 
 def cosmicthresh_remove(data, cosmicthresh):
     """
@@ -106,7 +107,7 @@ def edge_remove(data):
     data[wblankpx] = 0.
     return data
 
-def ar_cosmap(map):
+def ar_cosmap(thismap):
     """
     Get the cosine map and off-limb pixel map using WCS.
     ;Generate a map of the solar disk that is 1 at disk center and goes radially outward as the cos(angle to LOS) 
@@ -119,27 +120,27 @@ def ar_cosmap(map):
     fudge=0.999
     #
     # get helioprojective_coordinates
-    xx, yy = wcs.convert_pixel_to_data(map.data.shape,
-                                                   [map.meta["CDELT1"], map.meta["CDELT2"]],
-                                                   [map.meta["CRPIX1"], map.meta["CRPIX2"]],
-                                                   [map.meta["CRVAL1"], map.meta["CRVAL2"]])
+    xx, yy = wcs.convert_pixel_to_data(thismap.data.shape,
+                                                   [thismap.meta["CDELT1"], thismap.meta["CDELT2"]],
+                                                   [thismap.meta["CRPIX1"], thismap.meta["CRPIX2"]],
+                                                   [thismap.meta["CRVAL1"], thismap.meta["CRVAL2"]])
     rr = ((xx**2.) + (yy**2.))**(0.5)
     #
     coscor = rr
-    rrdeg = np.arcsin(coscor / map.meta["RSUN_OBS"])
+    rrdeg = np.arcsin(coscor / thismap.meta["RSUN_OBS"])
     coscor = 1. / np.cos(rrdeg)
-    wgt = np.where(rr > (map.meta["RSUN_OBS"]*fudge))
+    wgt = np.where(rr > (thismap.meta["RSUN_OBS"]*fudge))
     coscor[wgt] = 1.
     #
     offlimb = rr
-    wgtrr = np.where(rr >= (map.meta["RSUN_OBS"]*fudge))
+    wgtrr = np.where(rr >= (thismap.meta["RSUN_OBS"]*fudge))
     offlimb[wgtrr] = 0.
-    wltrr = np.where(rr < (map.meta["RSUN_OBS"]*fudge))
+    wltrr = np.where(rr < (thismap.meta["RSUN_OBS"]*fudge))
     offlimb[wltrr] = 1.
     #
     #below is from Sam's code
     # hcc_x, hcc_y, hcc_z = wcs.convert_hpc_hcc(x_coords, y_coords,
-    #                                           dsun_meters=map.meta["DSUN_OBS"],
+    #                                           dsun_meters=thismap.meta["DSUN_OBS"],
     #                                           z=True)
     # cosmap = cv2.normalize(hcc_z, None, 0, 1, cv2.NORM_MINMAX)
     return coscor, rrdeg, offlimb
@@ -163,18 +164,20 @@ def median_filter(data, medfiltwidth):
     """
     return scipy.ndimage.gaussian_filter(data, medfiltwidth)
 
-def cosine_correction(map, cosmap):
+def cosine_correction(thismap, cosmap):
     """
     Do magnetic field cosine correction
     Limit correction to having 1 pixel at edge of the Sun
     This is the maximum factor of pixel area covered by a single pixel at the solar limb as compared with at disk centre
     """
-    thetalim = np.arcsin(1. - map.meta["CDELT1"] / map.meta["RSUN_OBS"])
+    thetalim = np.arcsin(1. - thismap.meta["CDELT1"] / thismap.meta["RSUN_OBS"])
     coscorlim = 1. / np.cos(thetalim)
     cosmaplim = np.where((cosmap) > coscorlim)
     cosmap[cosmaplim] = coscorlim
-    return map.data*cosmap, cosmap
+    return thismap.data*cosmap, cosmap
 
+def myround(x, base=5):
+    return int(base * round(float(x)/base))
 
 if __name__ == '__main__':
     ar_processmag()
