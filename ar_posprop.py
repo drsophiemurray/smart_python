@@ -34,22 +34,18 @@ from sunpy.coordinates import frames
 import pandas as pd
 
 def ar_posprop(thismap, mask, cosmap):
-    """	blankstr={datafile:indatafile[0],arid:0,xcenbnd:0d, ycenbnd:0d, xcenflx:0d, ycenflx:0d, xcenarea:0d, ycenarea:0d, $
-          hcxbnd:0d, hcybnd:0d, hcxflx:0d, hcyflx:0d, hcxarea:0d, hcyarea:0d, $
-          hglonbnd:0d, hglatbnd:0d, hglonflx:0d, hglatflx:0d, hglonarea:0d, hglatarea:0d, $
-          carlonbnd:0d,  carlonflx:0d,  carlonarea:0d, $
-          xminbnd:0d, yminbnd:0d, xmaxbnd:0d, ymaxbnd:0d}
+    """
     """
 #    pxmmsq =  ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=False)
 #    pxcmsq = ar_pxscale(thismap, cmsqr=True, mmppx=False, cmppx=False)
     nmask = np.max(mask)
     # Create dataframes
     ardf = pd.DataFrame(columns = ['arid',
-                                 'xminbnd', 'yminbnd', 'xmaxbnd', 'ymaxbnd', 'xcenbnd', 'ycenbnd',
-                                 'xcenflx', 'ycenflx', 'xcenarea', 'ycenarea',
-                                 'hcxbnd', 'hcybnd', 'hcxflx', 'hcyflx', 'hcxarea', 'hcyarea',
-                                 'hglonbnd', 'hglatbnd', 'hglonflx', 'hglatflx', 'hglonarea', 'hglatarea',
-                                 'carlonbnd', 'carlonflx', 'carlonarea'])
+                                   'xminbnd', 'yminbnd', 'xmaxbnd', 'ymaxbnd', 'xcenbnd', 'ycenbnd',
+                                   'xcenflx', 'ycenflx', 'xcenarea', 'ycenarea',
+                                   'hcxbnd', 'hcybnd', 'hcxflx', 'hcyflx', 'hcxarea', 'hcyarea',
+                                   'hglonbnd', 'hglatbnd', 'hglonflx', 'hglatflx', 'hglonarea', 'hglatarea',
+                                   'carlonbnd', 'carlonflx', 'carlonarea'])
     posdf = ardf.copy()
     negdf = ardf.copy()
     #For each AR...
