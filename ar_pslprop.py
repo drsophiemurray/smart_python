@@ -33,7 +33,7 @@ r_kernsz = 10 # I; the FWHM of the smoothing kernal for calculating Schrijver R 
 
 import numpy as np
 import sunpy.map
-from ar_detect import xyrcoord, ar_grow
+from ar_detect import xyrcoord, ar_grow, ar_pxscale
 from ar_posprop import px2hc, hc2hg
 from sunpy.sun import constants
 import pandas as pd
@@ -46,12 +46,16 @@ from skimage import measure
 from astropy.convolution import convolve, Box2DKernel
 
 
-def ar_pslprop(map, thismask, dproj, projmaxscale):
+def ar_pslprop(map, mask, doproj, projmaxscale):
     """.arpslstr={arid:0,psllength:0.,pslsglength:0.,pslcurvature:0d,rvalue:0.,wlsg:0.,bipolesep_mm:0.,bipolesep_px:0.,bipolesep_proj:0.}
     """
     sz = map.data.shape
     xscale = map.meta['cdelt1']
     nmask = np.max(mask)
+    psldf = pd.DataFrame(columns = ['arid',
+                                    'psllength', 'pslsglength', 'pslcurvature',
+                                    'rvalue', 'wlsg',
+                                    'bipolesep_mm', 'bipolesep_px'])#TO DO ADD FOLLOWING:, 'bipolesep_proj'])
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside detection boundary
         thismask = np.copy(mask)
@@ -144,17 +148,15 @@ def ar_pslprop(map, thismask, dproj, projmaxscale):
         wlsgdat[np.where(np.isnan(wlsgdat))] = 0.
         thiswlsg = np.sum(wlsgdat)
         # Fill structure
-        # thispslstr.arid = i
-        # thispslstr.psllength = psllength
-        # thispslstr.pslsglength = psllengtht
-        # thispslstr.pslcurvature = pslcurvature
-        # thispslstr.rvalue = thisr
-        # thispslstr.wlsg = thiswlsg
-        # thispslstr.bipolesep_mm = bipsepstr.gcdist_mm
-        # thispslstr.bipolesep_px = bipsepstr.gcdist_px
+        psldf = psldf.append([{'arid': i,
+                               'psllength': psllength, 'pslsglength': psllengtht, 'pslcurvature': pslcurvature,
+                               'rvalue': thisr, 'wlsg': thiswlsg,
+                               'bipolesep_mm': bipsepstr['gcdist_mm'],
+                               'bipolesep_px': bipsepstr['gcdist_px']}])
+                               #'bipolesep_proj': bipsepstr['gcdist_proj']}])
+        # TO DO - SHUOLD BE bisepstrproj for the last valeu:
         # thispslstr.bipolesep_proj = bipsepstrproj.pxsep
-        # arpslstr[i - 1] = thispslstr
-    return arpslstr
+    return psldf
 
 def ar_bipolesep(map):
     """Determine the flux-weighted bipole separation distance between the pos and neg centroids
@@ -181,7 +183,7 @@ def ar_bipolesep(map):
     nhgxflx, nhgyflx, carnxflx = hc2hg(map, nhcxflx, nhcyflx)
     gcdist_deg, outeqnode,  outadist = gc_dist(np.array((phgxflx, phgyflx)), np.array((nhgxflx, nhgyflx)), nonan=False)
     gcdist_mm = (gcdist_deg / 360.) * 2. * np.pi * (constants.radius.value / 1e6)
-    gcdist_px = (gcdist_deg / 360.) * 2. * np.pi * (submag.meta['rsun_obs'] / submag.meta['cdelt1'])
+    gcdist_px = (gcdist_deg / 360.) * 2. * np.pi * (map.meta['rsun_obs'] / map.meta['cdelt1'])
     sepstr = {'pxcen': pxpxloc, 'pycen': pypxloc, 'nxcen': nxpxloc, 'nycen': nypxloc,
               'plon': phgxflx, 'plat': phgyflx, 'nlon': nhgxflx, 'nlat': nhgyflx, 'pxsep': pxsep,
               'gdist_deg': gcdist_deg, 'gcdist_mm': gcdist_mm, 'gcdist_px': gcdist_px}
