@@ -22,7 +22,7 @@ from configparser import ConfigParser
 import sunpy.map
 import astropy.units as u
 
-def ar_processmag(thismap):
+def ar_processmag(thismap, medianfilter):
     """Load input paramters, remove cosmic rays and NaNs,
     then make all off-limb pixels zero, and clean up limb,
     rotate map and do a cosine correction.
@@ -30,6 +30,15 @@ def ar_processmag(thismap):
     ## Load configuration file
     config = ConfigParser()
     config.read("config.ini")
+    # Rotate
+    #thismap = thismap.rotate(angle=int(thismap.meta['crota2'])*u.deg)
+    #thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
+    #thismap.meta['crota2'] = 0.
+    # I commented out above as it was just adding way too much limb noise, so instead doing a hacky way
+    if (thismap.meta['crota2'] >= 100.):
+        data = np.flip(thismap.data, 1)[::-1]
+        thismap = sunpy.map.Map(data, thismap.meta)
+        thismap.meta['crota2'] = 0.
     # Already floats in numpy data array so skipped first line converting double to float
     imgsz = len(thismap.data) #not 1024 x 1024 like idl
     # Didnt load parameters - need to add to config file
@@ -37,23 +46,20 @@ def ar_processmag(thismap):
     data = cosmicthresh_remove(thismap.data, np.float(config.get('processing', 'cosmicthresh')))
     # Clean NaNs - Higgo used bilinear interpoaltion
     data = remove_nans(data)
-    # Clean edge - make all pixels off limb equal to 0. -- commented out as done during nan removal above!
-    # thismap.data = edge_remove(thismap.data)
+    # Clean edge - make all pixels off limb equal to 0. TO DO - can be commented out as done during nan removal above!
+    data = edge_remove(data)
     # Cosine map
     thismap = sunpy.map.Map(data, thismap.meta)
     cosmap, rrdeg, limbmask = ar_cosmap(thismap)
     # Remove limb issues
     data, limbmask = fix_limb(thismap.data, rrdeg, limbmask)
     # Median filter noisy values -- TO DO: do it properly like Higgo - check sunpy stuff - also commented as not used in main program
-    # data = median_filter(data, np.float(config.get('processing', 'medfiltwidth')))
+    if medianfilter is True:
+        data = median_filter(data, np.float(config.get('processing', 'medfiltwidth')))
     thismap = sunpy.map.Map(data, thismap.meta)
     # Magnetic field cosine correction
-    data, cosmap = cosine_correction(thismap, cosmap)
-    # Rotate
     thismap = sunpy.map.Map(data, thismap.meta)
-    thismap = thismap.rotate(angle=int(thismap.meta['crota2'])*u.deg)
-    thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
-    thismap.meta['crota2']=0.
+    data, cosmap = cosine_correction(thismap, cosmap)
     return thismap, cosmap, limbmask
 
 def cosmicthresh_remove(data, cosmicthresh):
@@ -121,18 +127,18 @@ def ar_cosmap(thismap):
     #
     # get helioprojective_coordinates
     xx, yy = wcs.convert_pixel_to_data(thismap.data.shape,
-                                                   [thismap.meta["CDELT1"], thismap.meta["CDELT2"]],
-                                                   [thismap.meta["CRPIX1"], thismap.meta["CRPIX2"]],
-                                                   [thismap.meta["CRVAL1"], thismap.meta["CRVAL2"]])
+                                       [thismap.meta["CDELT1"], thismap.meta["CDELT2"]],
+                                       [thismap.meta["CRPIX1"], thismap.meta["CRPIX2"]],
+                                       [thismap.meta["CRVAL1"], thismap.meta["CRVAL2"]])
     rr = ((xx**2.) + (yy**2.))**(0.5)
     #
-    coscor = rr
+    coscor = np.copy(rr)
     rrdeg = np.arcsin(coscor / thismap.meta["RSUN_OBS"])
     coscor = 1. / np.cos(rrdeg)
     wgt = np.where(rr > (thismap.meta["RSUN_OBS"]*fudge))
     coscor[wgt] = 1.
     #
-    offlimb = rr
+    offlimb = np.copy(rr)
     wgtrr = np.where(rr >= (thismap.meta["RSUN_OBS"]*fudge))
     offlimb[wgtrr] = 0.
     wltrr = np.where(rr < (thismap.meta["RSUN_OBS"]*fudge))
