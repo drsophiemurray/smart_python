@@ -19,12 +19,12 @@ if thismap.meta['naxis1'] == 4096:
     thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
 
 # Process it
-imgsz = len(thismap.data)
-original_time = thismap.date
-thisdatafile = original_time.strftime('%Y%m%d_%H%M')
+#imgsz = len(thismap.data)
+#original_time = thismap.date
+#thisdatafile = original_time.strftime('%Y%m%d_%H%M')
 
 # Now process magnetogram
-magproc, cosmap, limbmask = ar_processmag(thismap)
+magproc, cosmap, limbmask = ar_processmag(thismap, medianfilter=False)
 #TO DO- deprecated coordinates in sunpy
 
 #Create AR masks
