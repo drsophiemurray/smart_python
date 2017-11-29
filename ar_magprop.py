@@ -11,6 +11,7 @@
 
 import numpy as np
 from ar_detect import ar_pxscale
+import pandas as pd
 
 magthresh= 350.0 # F; a secondary segmentation threshold (for MDI) used to find all flux fragments in an image
 
@@ -22,6 +23,13 @@ def ar_magprop(map, mask, cosmap):
     pxmmsq =  ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=False)
     pxcmsq = ar_pxscale(map, cmsqr=True, mmppx=False, cmppx=False)
     nmask = np.max(mask)
+    magdf = pd.DataFrame(columns = ['arid',
+                                    'areabnd', 'posareanbnd', 'negareabnd',
+                                    'posarea', 'negarea', 'totarea',
+                                    'bmax', 'bmin', 'bmean',
+                                    'posflx', 'negflx', 'totflx',
+                                    'imbflx', 'frcflx'])
+
     #For each AR...
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside of detection boundary
@@ -59,7 +67,13 @@ def ar_magprop(map, mask, cosmap):
         negflx = np.sum(cosmap[wneg] * thismask[wneg] * pxcmsq * thisabs[wneg])
         posflx = np.sum(cosmap[wpos] * thismask[wpos] * pxcmsq * thisabs[wpos])
         frcflx = (posflx - negflx) / totflx
-    # sort out structure in for loop and outside...
-    return outstr
+        # Add to dataframe
+        magdf = magdf.append([{'arid': i,
+                             'areabnd': areabnd, 'posareanbnd': posareabnd, 'negareabnd': negareabnd,
+                             'posarea': posarea, 'negarea': negarea, 'totarea': totarea,
+                             'bmax': bmax, 'bmin': bmin, 'bmean': bmean,
+                             'posflx': posflx, 'negflx': negflx, 'totflx': totflx,
+                             'imbflx': imbflx, 'frcflx': frcflx}])
+    return magdf
 
 
