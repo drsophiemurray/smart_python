@@ -46,9 +46,9 @@ def ar_readmag():
     data_dir = "".join([os.path.expanduser('~'), config.get('paths','data_dir')])
     fits = download(link,folder=data_dir)
     ## Read file and plot it
-    map = plot_map(fits, data_dir)
-    map.save(data_dir + 'latest.fits', filetype='auto')
-    return map
+    thismap = plot_map(fits, data_dir)
+    thismap.save(data_dir + 'latest.fits', filetype='auto')
+    return thismap
 
 def get_link(url,strip_no):
     """Standard URL grab, making sure the latest version is downloaded.
@@ -86,24 +86,23 @@ def web_request(url):
 
 def plot_map(fits, folder):
     """Quickplot of HMI data just downloaded
-    Data is in map.data"""
-    map = sunpy.map.Map(fits)
+    Data is in thismap.data"""
+    thismap = sunpy.map.Map(fits)
     ## Need to downsample if 4096x4096
-    if map.meta['naxis1']==4096:
-        map = map.resample(u.Quantity([1024, 1024], u.pixel))
+    if thismap.meta['naxis1']==4096:
+        thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
     ## Normalise
-    #map.plot_settings['norm'] = colors.Normalize(vmin=-500., vmax=500.)
-    #map.peek()
+    #thismap.plot_settings['norm'] = colors.Normalize(vmin=-500., vmax=500.)
+    #thismap.peek()
     # fsz = 5
     # f, (ax) = plt.subplots(1, figsize=[fsz, fsz])
     # ax.set_xlabel('X (pixels)')
     # ax.set_ylabel('Y (pixels)')
-    # ax.imshow(map.data)
+    # ax.imshow(thismap.data)
     # axpos = ax.get_position()
-    # dpi = map.data.shape[0] / (axpos.x1 - axpos.x0) / fsz
+    # dpi = thismap.data.shape[0] / (axpos.x1 - axpos.x0) / fsz
     # plt.savefig(folder+'aia-figsave.png', dpi=dpi)
-
-    return map
+    return thismap
 
 
 if __name__ == '__main__':

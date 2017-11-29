@@ -34,15 +34,15 @@ strongthresh = 230.0 # a segmentation threshold to detect strong field fragments
 polethresh = .8 # imbalanced fraction of total area covered by a given (+ or -) polarity (=abs(npos-nneg)/abs(npos+nneg)), below which, the detection will be considered multipolar (core passes the flux balance test)
 
 
-def ar_detect_core(map, smartmask):
+def ar_detect_core(thismap, smartmask):
     """
     """
-    sz = map.data.shape
-    maporig=mapmsk=map
+    sz = thismap.data.shape
+    maporig=mapmsk=thismap
     # the smoothing gaussian kernal HWHM
-    smoothhwhm=smoothphys*cmpmm/ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=True)
+    smoothhwhm=smoothphys*cmpmm/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
     # Smooth the data (used for finding the PSL and PSL mask)
-    datasm = ar_grow(map.data, smoothhwhm, gauss=True, kern=None)
+    datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None)
     # Get ridge skeleton
     # use datasm, smooththresh
 #    ridgemask = ?ar_ridgemask(abs(datasm),thresh=params.smooththresh)
@@ -55,10 +55,10 @@ def ar_detect_core(map, smartmask):
     # Dilate PSL trace
 #    pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False, kern=None)
     # Make strong field masks
-    wstrong = np.where(np.abs(map.data) > strongthresh)
+    wstrong = np.where(np.abs(thismap.data) > strongthresh)
     strongmask = np.zeros(sz)
     strongmask[wstrong]=1.
-    datastrongsm = ar_grow(np.abs(map.data*strongmask), smoothhwhm, gauss=True, kern=None)
+    datastrongsm = ar_grow(np.abs(thismap.data*strongmask), smoothhwhm, gauss=True, kern=None)
     # Determine strong blob pixels
     wstrongblob = np.where(np.abs(datastrongsm) > smooththresh)
     strongblobmask = np.zeros(sz)
@@ -76,8 +76,8 @@ def ar_detect_core(map, smartmask):
         wthiscore = np.where(arcoremaskid == j)
         thiscoremask = np.zeros(sz)
         thiscoremask[wthiscore] = 1.
-        wpos = np.where((strongblobmask*thiscoremask*map.data) > strongthresh)
-        wneg = np.where((strongblobmask*thiscoremask*map.data) < -strongthresh)
+        wpos = np.where((strongblobmask*thiscoremask*thismap.data) > strongthresh)
+        wneg = np.where((strongblobmask*thiscoremask*thismap.data) < -strongthresh)
         npos = len(wpos[0])
         nneg = len(wneg[0])
         if (npos == 0.) or (nneg == 0.):
@@ -99,11 +99,11 @@ def ar_detect_core(map, smartmask):
     # Change the values to uniquely identify the ARs and blobs so that only 1 output mask needs to be saved
     arcoremaskfinal = smartmask + (arcoresmartcomb * 2.) + (arcoremaskmpoleid * 100.)
     # Output result
-#    arcoremap = sunpy.map.Map(arcoremaskfinal, map.meta)
-#    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, map.meta)
+#    arcoremap = sunpy.map.Map(arcoremaskfinal, thismap.meta)
+#    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, thismap.meta)
     # for now until fix above
-    arcoremap = sunpy.map.Map(arcoremaskid, map.meta) #for now until fix above
-    pslmaskmap = sunpy.map.Map(skeletonize(pslmask), map.meta) #for now until fix above
+    arcoremap = sunpy.map.Map(arcoremaskid, thismap.meta) #for now until fix above
+    pslmaskmap = sunpy.map.Map(skeletonize(pslmask), thismap.meta) #for now until fix above
     return arcoremap, pslmaskmap
 
 
@@ -112,7 +112,7 @@ def ar_ridgemask(data, thresh):
     determining the PSL mask, using a watershed transform
     """
     sz=data.shape
-    data[np.where(map.data<thresh)]=thresh
+    data[np.where(data<thresh)]=thresh
     data=-data
     return watershed(data, markers=8, connectivity=8)
 

@@ -38,20 +38,20 @@ smooththresh = 15.0 # a segmentation threshold used in processing magnetograms (
 magthresh =  350.0 #a secondary segmentation threshold (for MDI) used to find all flux fragments in an image
 
 
-def ar_detect(map, limbmask):
+def ar_detect(thismap, limbmask):
     """
     """
-    sz = map.data.shape
+    sz = thismap.data.shape
     ## Initialise blank mask map
     mask = np.zeros(sz)
     ## Gaussian smoothing
-    datasm, smoothhwhm = gauss_smooth(map, smoothphys, cmpmm)
+    datasm, smoothhwhm = gauss_smooth(thismap, smoothphys, cmpmm)
     ## Make a mask of detections
     wmask = np.where(np.abs(datasm) > smooththresh)
     mask[wmask] = 1.
     ## Segment the non-smoothed magnetogram to grab near by fragments and connect adjacent blobs
     fragmask = np.zeros(sz)
-    wfrag = np.where(np.abs(map.data) >  magthresh)
+    wfrag = np.where(np.abs(thismap.data) >  magthresh)
     fragmask[wfrag] = 1.
     smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False, kern=None)
     ## Region grow the smooth detections
@@ -72,29 +72,29 @@ def ar_detect(map, limbmask):
     maskfull = measure.label(grmask, background=0)
     ## Order the detections by number of pixels
     maskorder = ar_order_mask(maskfull, sz)
-    maskmap = sunpy.map.Map(maskorder, map.meta)
+    maskmap = sunpy.map.Map(maskorder, thismap.meta)
     return maskmap
 
 
-def gauss_smooth(map, rsgrad, cmpmm):
+def gauss_smooth(thismap, rsgrad, cmpmm):
     """Gaussian smooth the magnetogram
     """
     ## Get smoothing Gaussian kernel HWHM
-    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=True)
-    datasm = ar_grow(map.data, smoothhwhm, gauss=True, kern=None) #to do: make gaussian an option
+    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
+    datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None) #to do: make gaussian an option
     return datasm, smoothhwhm
 
-def ar_pxscale(map, cmsqr, mmppx, cmppx):
+def ar_pxscale(thismap, cmsqr, mmppx, cmppx):
     """Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
     """
     ## Area of pixel in Mm^2
     rsunmm = constants.get('radius').value/1e6
-    mmperarcsec = rsunmm/map.meta["RSUN_OBS"] # Mm/arcsec
-    pixarea = ((map.meta["CDELT1"] * mmperarcsec) * (map.meta["CDELT2"] * mmperarcsec)) # Mm^2
+    mmperarcsec = rsunmm/thismap.meta["RSUN_OBS"] # Mm/arcsec
+    pixarea = ((thismap.meta["CDELT1"] * mmperarcsec) * (thismap.meta["CDELT2"] * mmperarcsec)) # Mm^2
     if cmsqr is True:
         pixarea = pixarea*1e16
     ## Length of a side of a pixel
-    retmmppx = (map.meta["CDELT1"]/map.meta["RSUN_OBS"])*rsunmm # Mm/px
+    retmmppx = (thismap.meta["CDELT1"]/thismap.meta["RSUN_OBS"])*rsunmm # Mm/px
     if cmppx is True:
         return retmmppx*1e16
     elif mmppx is True:
