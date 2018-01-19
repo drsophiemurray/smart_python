@@ -58,21 +58,21 @@ def ar_pslprop(map, mask, doproj, projmaxscale):
                                     'bipolesep_mm', 'bipolesep_px'])#TO DO ADD FOLLOWING:, 'bipolesep_proj'])
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside detection boundary
-        thismask = np.copy(mask)
-        thismask[np.where(mask != i)] = 0.
-        thismask[np.where(mask == i)] = 1.
-        thisdat = map.data*thismask
+        tmpmask = np.copy(mask)
+        tmpmask[np.where(mask != i)] = 0.
+        tmpmask[np.where(mask == i)] = 1.
+        tmpdat = map.data*tmpmask
         # Take a sub-map around the AR
-        thisdatmap = sunpy.map.Map(thisdat, map.meta)
-        maskmap = sunpy.map.Map(thismask, map.meta)
-        #xrange = ((np.min(np.where(thismask == 1)[1])-1, np.max(np.where(thismask == 1)[1])+1))
-        #yrange = ((np.min(np.where(thismask == 1)[0])-1, np.max(np.where(thismask == 1)[0])+1))
-        bottom_left_pixels = ((np.min(np.where(thismask == 1)[1])-1, np.min(np.where(thismask == 1)[0])-1))
+        tmpdatmap = sunpy.map.Map(tmpdat, map.meta)
+        maskmap = sunpy.map.Map(tmpmask, map.meta)
+        #xrange = ((np.min(np.where(tmpmask == 1)[1])-1, np.max(np.where(tmpmask == 1)[1])+1))
+        #yrange = ((np.min(np.where(tmpmask == 1)[0])-1, np.max(np.where(tmpmask == 1)[0])+1))
+        bottom_left_pixels = ((np.min(np.where(tmpmask == 1)[1])-1, np.min(np.where(tmpmask == 1)[0])-1))
         #bl = pix_to_arc(map, bottom_left_pixels[0], bottom_left_pixels[1])
-        top_right_pixels = ((np.max(np.where(thismask == 1)[1])+1, np.max(np.where(thismask == 1)[0])+1))
+        top_right_pixels = ((np.max(np.where(tmpmask == 1)[1])+1, np.max(np.where(tmpmask == 1)[0])+1))
         #tr = pix_to_arc(map, top_right_pixels[0], top_right_pixels[1])
         submask = maskmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
-        submag = thisdatmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
+        submag = tmpdatmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
         #Convert to wcs structure??
         # Determine the bipole separation properties
         bipsepstr = ar_bipolesep(submag)
@@ -120,14 +120,14 @@ def ar_pslprop(map, mask, doproj, projmaxscale):
         pslmaskt = skeletonize(pslmask)
         pslmaskt_thresh = skeletonize(pslmaskthresh)
         # Find the largest segment of PSL and indicate terminals
-        pslmaslt_skel = skeletonize(ar_largest_blob(pslmask, gradpsl))
+        #pslmaskt_skel = skeletonize(ar_largest_blob(pslmask, gradpsl))
         # Large commented out section skipped
         # Determine the longest PSLs Skeleton length and curvature
         pslcurvature = 0.
         meanmmscl = np.mean(projmmscl)
         psllength = np.sum(pslmaskt * projmmscl)
         psllengtht = np.sum(pslmaskt_thresh * projmmscl) #strong
-        # Determine  R
+        # Determine R
         # compute pos and neg polarity maps, with product defining polarity inversion line:
         prim = np.copy(rim)
         prim[np.where(rim < 150.)] = 0.
