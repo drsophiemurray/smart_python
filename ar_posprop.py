@@ -33,12 +33,12 @@ from astropy.coordinates import SkyCoord
 from sunpy.coordinates import frames
 import pandas as pd
 
-def ar_posprop(thismap, mask, cosmap):
+def ar_posprop(thismap, thismask, cosmap):
     """
     """
 #    pxmmsq =  ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=False)
 #    pxcmsq = ar_pxscale(thismap, cmsqr=True, mmppx=False, cmppx=False)
-    nmask = np.max(mask)
+    nmask = np.max(thismask)
     # Create dataframes
     ardf = pd.DataFrame(columns = ['arid',
                                    'xminbnd', 'yminbnd', 'xmaxbnd', 'ymaxbnd', 'xcenbnd', 'ycenbnd',
@@ -51,23 +51,23 @@ def ar_posprop(thismap, mask, cosmap):
     #For each AR...
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside detection boundary
-        tmpmask = np.copy(mask)
-        tmpmask[np.where(mask != i)] = 0.
-        thisdat = np.copy(thismap.data)
-        thisdat[np.where(mask != i)] = 0.
-        thisabs = np.abs(thisdat)
-        thisflx = thisabs*cosmap
+        #tmpmask = np.copy(thismask)
+        #tmpmask[np.where(thismask != i)] = 0.
+        tmpdat = np.copy(thismap.data)
+        tmpdat[np.where(thismask != i)] = 0.
+        tmpabs = np.abs(tmpdat)
+        tmpflx = tmpabs*cosmap
         # Where are values within the detection boundary
-        tmpmask[np.where(mask == i)] = 1.
+        #tmpmask[np.where(thismask == i)] = 1.
 #        nothresh=0 & nopos=0 & noneg=0 & noposbnd=0 & nonegbnd=0
         # Where are the signed values
-#        wneg = np.where(thisdat < 0.)
-#        wpos = np.where(thisdat > 0.)
+#        wneg = np.where(tmpdat < 0.)
+#        wpos = np.where(tmpdat > 0.)
         # Fill the position structure for whole detection
-        arstr = ar_posprop_findpos(i, thismap, np.where(mask == i), thisflx)
+        arstr = ar_posprop_findpos(i, thismap, np.where(thismask == i), tmpflx)
         # Same for positive and negative regions
-        posstr = ar_posprop_findpos(i, thismap, np.where(thisdat > 0), thisflx)
-        negstr = ar_posprop_findpos(i, thismap, np.where(thisdat < 0), thisflx)
+        posstr = ar_posprop_findpos(i, thismap, np.where(tmpdat > 0), tmpflx)
+        negstr = ar_posprop_findpos(i, thismap, np.where(tmpdat < 0), tmpflx)
         # Fill position dataframes
         ardf = ardf.append([arstr])
         posdf = posdf.append([posstr])
