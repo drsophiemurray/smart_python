@@ -28,6 +28,7 @@ from skimage import measure
 from scipy import ndimage as nd
 from skimage.morphology import watershed
 from skimage import filters
+import cv2
 
 status=-1
 
@@ -45,7 +46,7 @@ def ar_detect(thismap, limbmask):
     ## Initialise blank mask map
     mask = np.zeros(sz)
     ## Gaussian smoothing
-    datasm, smoothhwhm = gauss_smooth(thismap, smoothphys, cmpmm)
+    datasm, smoothhwhm = gauss_smooth(thismap, smoothphys, cmpmm) #TO DO: same thing as ar_grow(thismap.data,smoothhwhm,gauss=True,kern=None)
     ## Make a mask of detections
     wmask = np.where(np.abs(datasm) > smooththresh)
     mask[wmask] = 1.
@@ -62,16 +63,17 @@ def ar_detect(thismap, limbmask):
     # https://stackoverflow.com/questions/31848309/classifying-python-array-by-nearest-seed-region
     #distance = nd.distance_transform_edt(smfragmask)
     #grmask = watershed(distance, mask, mask=smfragmask)
-    grmask = watershed(filters.sobel(smfragmask), mask, mask=smfragmask)
+    grmask = watershed(filters.sobel(smfragmask), mask, mask=smfragmask) ##confirmed exactly same as region_grow(smfragmask,poismask,thresh=[0.5,1.5])
+    #grmask = cv2.dilate(grmask, np.ones((2,2),np.uint8), iterations=1) #make sure areas connect
     ## Mask offlimb pixels
     grmask = grmask*limbmask
     ## Return to 1s and 0s ndi.binary_fill_holes(segmentation - 1)
-    grmask[np.where(grmask < 0.5)] = 0.
+    grmask[np.where(grmask < 0.5)] = 0. ##really dont think this is needed in python
     grmask[np.where(grmask >= 0.5)] = 1.
     ## Separate the detections by assigning numbers
-    maskfull = measure.label(grmask, background=0)
+    maskfull, num = nd.label(grmask)#measure.label(grmask, background=0, return_num=True) #found other way connected regions that werent connected in idl
     ## Order the detections by number of pixels
-    maskorder = ar_order_mask(maskfull, sz)
+    maskorder = ar_order_mask(maskfull, sz) ##seems to drop a region
     maskmap = sunpy.map.Map(maskorder, thismap.meta)
     return maskmap
 
