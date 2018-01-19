@@ -38,9 +38,9 @@ def ar_detect_core(thismap, smartmask):
     """
     """
     sz = thismap.data.shape
-    maporig=mapmsk=thismap
+   # maporig=mapmsk=thismap
     # the smoothing gaussian kernal HWHM
-    smoothhwhm=smoothphys*cmpmm/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
+    smoothhwhm = smoothphys*cmpmm/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
     # Smooth the data (used for finding the PSL and PSL mask)
     datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None)
     # Get ridge skeleton
@@ -54,6 +54,7 @@ def ar_detect_core(thismap, smartmask):
 #    psltrace[wpsl] = 1.
     # Dilate PSL trace
 #    pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False, kern=None)
+    pslblobmask = ar_grow(skeletonize(pslmask), smoothhwhm, gauss=False, kern=None) #for now until get watershed fixed!!
     # Make strong field masks
     wstrong = np.where(np.abs(thismap.data) > strongthresh)
     strongmask = np.zeros(sz)
@@ -64,10 +65,10 @@ def ar_detect_core(thismap, smartmask):
     strongblobmask = np.zeros(sz)
     strongblobmask[wstrongblob] = 1.
     # Trim the PSL blob array to where it overlaps with the strong blob array
-#    pslblobmasktrim = strongblobmask * pslblobmask
+    pslblobmasktrim = strongblobmask * pslblobmask
     # Region grow with PSL map as a base and strong field map as a kernel
-#    arcoremask = watershed(filters.sobel(pslblobmasktrim),strongblobmask, mask=pslblobmasktrim)
-    arcoremask = strongblobmask #for now until get watershed fixed!!
+    arcoremask = watershed(filters.sobel(pslblobmasktrim),strongblobmask, mask=pslblobmasktrim)
+#    arcoremask = strongblobmask ##SOPHIE:: looks like could skip all of above as these are equal??!!!
     # Filter to only take multi polar detections -> if >95% of pixels (above strong field threshold) are of one polarity then disregard the detection.
     arcoremaskid = measure.label(arcoremask, background=0)
     nid = np.max(arcoremaskid)
@@ -89,21 +90,21 @@ def ar_detect_core(thismap, smartmask):
             arcoremaskid[wthiscore] = 0.
     # Final detection mask is original detections + core detections.
     # Reset all values to 1.
-    arcoremaskmpole = arcoremaskid < 1.
+    arcoremaskmpole = arcoremaskid >= 1.
     # Re-index the final core mask
     arcoremaskmpoleid = measure.label(arcoremaskmpole, background=0)
     # Make combined core and normal AR detection using region grow
     # identifies regions that are attached to AR cores
-    smartmask = smartmask < 1.
-    arcoresmartcomb = watershed(filters.sobel(smartmask), arcoremaskmpole, mask=smartmask)
+    smartmask = smartmask >= 1.
+    arcoresmartcomb = watershed(filters.sobel(smartmask), arcoremaskmpole, mask=smartmask) #doesnt work so have to output arcoremaskid right now -- need to swap with region_grow and then output the final one
     # Change the values to uniquely identify the ARs and blobs so that only 1 output mask needs to be saved
     arcoremaskfinal = smartmask + (arcoresmartcomb * 2.) + (arcoremaskmpoleid * 100.)
     # Output result
 #    arcoremap = sunpy.map.Map(arcoremaskfinal, thismap.meta)
 #    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, thismap.meta)
     # for now until fix above
-    arcoremap = sunpy.map.Map(arcoremaskid, thismap.meta) #for now until fix above
-    pslmaskmap = sunpy.map.Map(skeletonize(pslmask), thismap.meta) #for now until fix above
+    arcoremap = sunpy.map.Map(measure.label(arcoremaskmpoleid, background=0), thismap.meta) #for now until fix above
+    pslmaskmap = sunpy.map.Map(skeletonize(pslmask), thismap.meta) #for now until fix above -- doesnt deal with strong flux, need to put an if in arcoremap...
     return arcoremap, pslmaskmap
 
 
@@ -151,3 +152,18 @@ def ar_core2mask(data):
 
 if __name__ == '__main__':
     ar_detect_core()
+
+#def skeleton(data=abs(datasm), thresh=smooththresh):
+#    data[np.where(data < thresh)] = 0.
+#    data[np.where(data >= thresh)] = 1.
+#    """https://gist.github.com/AnthonyNystrom/1921443"""
+#    radius = 8
+#    # Calculate the Euclidean distance transform of the image
+#    # ( This will make a ridge in the center of the blob that will be the bones of our skeleton )
+ #   dist = ndimage.distance_transform_edt(data)
+#    # Calculate the morphological laplacian
+#    # ( this makes the ridge from the distance transform really pop out, it's a kind of an edge detection )
+#    morph = ndimage.morphological_laplace(dist, (radius, radius))
+#    # Threshold the Laplacian, and voila, we've got a nice ridge
+#    skeleton = morph < morph.min() / 2
+#    return skeleton
