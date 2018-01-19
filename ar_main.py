@@ -12,11 +12,14 @@ import matplotlib.pylab as plt
 # First load the data
 #map = ar_readmag()
 thismap = sunpy.map.Map('/Users/sophie/data/smart/latest.fits')
-thismap = sunpy.map.Map('/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits')
+#thismap = sunpy.map.Map('/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits')
+#thismap = sunpy.map.Map('/Users/sophie/Downloads/hmi.M_720s.20140921_120000_TAI.fits')
 
 ## Need to downsample if 4096x4096
 if thismap.meta['naxis1'] == 4096:
     thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
+    thismap.meta['naxis1'] = 1024
+    thismap.meta['naxis2'] = 1024
 
 # Process it
 #imgsz = len(thismap.data)
@@ -34,6 +37,13 @@ thismask = thisar.data
 #TO DO -ridgmask! Use skeleton for now maybe?
 #TO DO ar_core2mask thismask,smartmask,coresmartmask=ar_core2mask(thisar.data)
 
+plt.ion()
+thismap.peek(vmin=-500,vmax=500)
+plt.contour(thismask,origin='lower')
+plt.contour(pslmap.data,origin='lower')
+
+#plt.close()
+
 #Get properties
 posprop = ar_posprop(magproc, thismask, cosmap)
 magprop = ar_magprop(magproc, thismask, cosmap)
@@ -41,11 +51,11 @@ pslprop = ar_pslprop(magproc, thismask, doproj=False, projmaxscale=1024)#dproj=T
 #TO DO-projection!
 
 
-import sunpy.map
+#import sunpy.map
 
-thismap_idl = sunpy.map.Map('/Users/sophie/data/smart/latest.fits')
-magproc_idl = sunpy.map.Map('magproc.fits')
-thissm_idl = sunpy.map.Map('thissm.fits')
-thisar_idl = sunpy.map.Map('thisar.fits')
-thismaskmap_idl = sunpy.map.Map('thismaskmap.fits')
-thismask_idl = thismaskmap_idl.data
+#thismap_idl = sunpy.map.Map('/Users/sophie/data/smart/latest.fits')
+#magproc_idl = sunpy.map.Map('magproc.fits')
+#thissm_idl = sunpy.map.Map('thissm.fits')
+#thisar_idl = sunpy.map.Map('thisar.fits')
+#thismaskmap_idl = sunpy.map.Map('thismaskmap.fits')
+#thismask_idl = thismaskmap_idl.data
