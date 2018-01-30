@@ -73,8 +73,9 @@ def ar_detect(thismap, limbmask):
     ## Separate the detections by assigning numbers
     maskfull, num = nd.label(grmask)#measure.label(grmask, background=0, return_num=True) #found other way connected regions that werent connected in idl
     ## Order the detections by number of pixels
-    maskorder = ar_order_mask(maskfull, sz) ##seems to drop a region
-    maskmap = sunpy.map.Map(maskorder, thismap.meta)
+    #maskorder = ar_order_mask(maskfull, sz) ##seems to drop a region ## dont think I need to order them for the next part as just goes binary again
+    #maskmap = sunpy.map.Map(maskorder, thismap.meta)
+    maskmap = sunpy.map.Map(maskfull, thismap.meta)
     return maskmap
 
 
