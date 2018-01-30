@@ -101,12 +101,9 @@ def ar_detect_core(thismap, smartmask):
     # Output result
     arcoremap = sunpy.map.Map(arcoremaskmpoleid, thismap.meta)
     pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, thismap.meta)
-    smartmaskmap = sunpy.map.Map(smartmask*psltrace, thismap.meta)
-    smartconnmap = sunpy.map.Map(arcoresmartcomb*psltrace, thismap.meta)
+    smartmaskmap = sunpy.map.Map(smartmask*psltrace, thismap.meta) #a SMART mask of 0's and 1's
+    smartconnmap = sunpy.map.Map(arcoresmartcomb*psltrace, thismap.meta) #a SMART mask with only the blobs that are touching cores
     return arcoremap, pslmaskmap
-#arcoremaskmpoleid is core_mask
-#acoresmarcomb is smartconn
-#smartmask is smartmask
 
 def ar_ridgemask(data, thresh):
     """Pull out a ridge skeleton and insert into a mask to create a 1 pixel-wide trace for
@@ -145,27 +142,11 @@ def ar_pslmask(data, radius, thresh, skeleton):
         return outmask
 
 def ar_core2mask(data):
-    """TO BE CONVERTED"""
+    """NOT NEEDED"""
     core_mask = np.ceil( ( (data - 3.) > 0 ) / 100. )
     smartmask = (data-core_mask*100.)<1.
     smartconn = (data-core_mask*100.)>1.<2.
     return coremask, np.ceil(smartmask), np.ceil(smartconn)
 
-
 if __name__ == '__main__':
     ar_detect_core()
-
-#def skeleton(data=abs(datasm), thresh=smooththresh):
-#    data[np.where(data < thresh)] = 0.
-#    data[np.where(data >= thresh)] = 1.
-#    """https://gist.github.com/AnthonyNystrom/1921443"""
-#    radius = 8
-#    # Calculate the Euclidean distance transform of the image
-#    # ( This will make a ridge in the center of the blob that will be the bones of our skeleton )
- #   dist = ndimage.distance_transform_edt(data)
-#    # Calculate the morphological laplacian
-#    # ( this makes the ridge from the distance transform really pop out, it's a kind of an edge detection )
-#    morph = ndimage.morphological_laplace(dist, (radius, radius))
-#    # Threshold the Laplacian, and voila, we've got a nice ridge
-#    skeleton = morph < morph.min() / 2
-#    return skeleton
