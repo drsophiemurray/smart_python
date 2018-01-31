@@ -50,7 +50,7 @@ def ar_detect_core(thismap, smartmask):
     # Get PSL map
     # use datasm, smoothwhm, smooththresh
     pslmask = ar_pslmask(datasm, smoothhwhm, smooththresh, skeleton=False)
-    wpsl = np.where((test + pslmask) == 2)
+    wpsl = np.where((ridgemask + pslmask) == 2)
     psltrace = np.zeros(sz)
     psltrace[wpsl] = 1.
     # Dilate PSL trace
