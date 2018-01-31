@@ -34,11 +34,9 @@ magproc, cosmap, limbmask = ar_processmag(thismap, medianfilter=False)
 thissm = ar_detect(magproc, limbmask)
 thisar, pslmap = ar_detect_core(magproc, thissm.data)
 thismask = thisar.data
-#TO DO -ridgmask! Use skeleton for now maybe?
-#TO DO ar_core2mask thismask,smartmask,coresmartmask=ar_core2mask(thisar.data)
 
 plt.ion()
-thismap.peek(vmin=-500,vmax=500)
+magproc.peek(vmin=-500,vmax=500)
 plt.contour(thismask,origin='lower')
 plt.contour(pslmap.data,origin='lower')
 
