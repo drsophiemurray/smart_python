@@ -73,7 +73,7 @@ def ar_pslprop(map, mask, doproj, projmaxscale):
         #tr = pix_to_arc(map, top_right_pixels[0], top_right_pixels[1])
         submask = maskmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
         submag = tmpdatmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
-        #Convert to wcs structure??
+        #Convert to wcs structure?? doesnt seem to be used! -- converted map to Helioprojective-Cartesian
         # Determine the bipole separation properties
         bipsepstr = ar_bipolesep(submag)
         # Stereographic deprojection --- TO DO!!!!! DOPROJ=1
@@ -152,7 +152,7 @@ def ar_pslprop(map, mask, doproj, projmaxscale):
                                'psllength': psllength, 'pslsglength': psllengtht, 'pslcurvature': pslcurvature,
                                'rvalue': thisr, 'wlsg': thiswlsg,
                                'bipolesep_mm': bipsepstr['gcdist_mm'],
-                               'bipolesep_px': bipsepstr['gcdist_px']}])
+                               'bipolesep_px': bipsepstr['gcdist_px']}], ignore_index=True)
                                #'bipolesep_proj': bipsepstr['gcdist_proj']}])
         # TO DO - SHUOLD BE bisepstrproj for the last valeu:
         # thispslstr.bipolesep_proj = bipsepstrproj.pxsep
