@@ -33,11 +33,11 @@ from astropy.coordinates import SkyCoord
 from sunpy.coordinates import frames
 import pandas as pd
 
-def ar_posprop(thismap, thismask, cosmap):
+def ar_posprop(inmap, thismask, cosmap):
     """
     """
-#    pxmmsq =  ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=False)
-#    pxcmsq = ar_pxscale(thismap, cmsqr=True, mmppx=False, cmppx=False)
+#    pxmmsq =  ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=False)
+#    pxcmsq = ar_pxscale(inmap, cmsqr=True, mmppx=False, cmppx=False)
     nmask = np.max(thismask)
     # Create dataframes
     ardf = pd.DataFrame(columns = ['arid',
@@ -53,7 +53,7 @@ def ar_posprop(thismap, thismask, cosmap):
         # Zero pixels outside detection boundary
         #tmpmask = np.copy(thismask)
         #tmpmask[np.where(thismask != i)] = 0.
-        tmpdat = np.copy(thismap.data)
+        tmpdat = np.copy(inmap.data)
         tmpdat[np.where(thismask != i)] = 0.
         tmpabs = np.abs(tmpdat)
         tmpflx = tmpabs*cosmap
@@ -64,31 +64,31 @@ def ar_posprop(thismap, thismask, cosmap):
 #        wneg = np.where(tmpdat < 0.)
 #        wpos = np.where(tmpdat > 0.)
         # Fill the position structure for whole detection
-        arstr = ar_posprop_findpos(i, thismap, np.where(thismask == i), tmpflx)
+        arstr = ar_posprop_findpos(i, inmap, np.where(thismask == i), tmpflx)
         # Same for positive and negative regions
-        posstr = ar_posprop_findpos(i, thismap, np.where(tmpdat > 0), tmpflx)
-        negstr = ar_posprop_findpos(i, thismap, np.where(tmpdat < 0), tmpflx)
+        posstr = ar_posprop_findpos(i, inmap, np.where(tmpdat > 0), tmpflx)
+        negstr = ar_posprop_findpos(i, inmap, np.where(tmpdat < 0), tmpflx)
         # Fill position dataframes
-        ardf = ardf.append([arstr])
-        posdf = posdf.append([posstr])
-        negdf = negdf.append([negstr])
+        ardf = ardf.append([arstr], ignore_index=True)
+        posdf = posdf.append([posstr], ignore_index=True)
+        negdf = negdf.append([negstr], ignore_index=True)
     #TO DO: ?? check differences in lists between posprop and findpos??
     return ardf#, posdf, negdf
 
-def ar_posprop_findpos(arid, thismap, war, data):
+def ar_posprop_findpos(arid, inmap, war, data):
     """
     """
     data = np.abs(data)
-    date = thismap.meta['t_obs']
-    dx = thismap.meta['cdelt1']
-    dy = thismap.meta['cdelt2']
-    rsun = thismap.meta["rsun_obs"]
-    xc = thismap.meta["crval1"] + thismap.meta["cdelt1"]*(((thismap.meta["naxis1"] + 1)/2) - thismap.meta["crpix1"])
-    #xc = thismap.meta["crval1"] + thismap.meta["cdelt1"]*np.cos(thismap.meta["crota2"])*(((thismap.meta["naxis1"] + 1)/2) - thismap.meta["crpix1"]) - thismap.meta["cdelt2"]*np.sin(thismap.meta["crota2"])*(((thismap.meta["naxis2"] + 1)/2) - thismap.meta["crpix2"])
-    yc = thismap.meta["crval2"] + thismap.meta["cdelt2"] * (((thismap.meta["naxis2"] + 1) / 2) - thismap.meta["crpix2"])
-    #yc = thismap.meta["crval2"] + thismap.meta["cdelt1"]*np.sin(thismap.meta["crota2"])*(((thismap.meta["naxis1"] + 1)/2) - thismap.meta["crpix1"]) + thismap.meta["cdelt2"]*np.cos(thismap.meta["crota2"])*(((thismap.meta["naxis2"] + 1)/2) - thismap.meta["crpix2"])
+    date = inmap.meta['t_obs']
+    dx = inmap.meta['cdelt1']
+    dy = inmap.meta['cdelt2']
+    rsun = inmap.meta["rsun_obs"]
+    xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"])
+    #xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*np.cos(inmap.meta["crota2"])*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"]) - inmap.meta["cdelt2"]*np.sin(inmap.meta["crota2"])*(((inmap.meta["naxis2"] + 1)/2) - inmap.meta["crpix2"])
+    yc = inmap.meta["crval2"] + inmap.meta["cdelt2"] * (((inmap.meta["naxis2"] + 1) / 2) - inmap.meta["crpix2"])
+    #yc = inmap.meta["crval2"] + inmap.meta["cdelt1"]*np.sin(inmap.meta["crota2"])*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"]) + inmap.meta["cdelt2"]*np.cos(inmap.meta["crota2"])*(((inmap.meta["naxis2"] + 1)/2) - inmap.meta["crpix2"])
     # get x and y indices
-    sz = thismap.data.shape
+    sz = inmap.data.shape
     xx, yy, rr = xyrcoord(sz)
     xwar = war[1]
     ywar = war[0]
@@ -103,17 +103,17 @@ def ar_posprop_findpos(arid, thismap, war, data):
     ymaxbnd = yminmax[1]
     hcxbnd, hcybnd = px2hc(xcenbnd, ycenbnd, dx, dy, xc, yc, sz)
     #hgxbnd, hgybnd, carxbnd = hc2hg(hcxbnd, hcybnd, date, rsun, carx=True)
-    hgxbnd, hgybnd, carxbnd = hc2hg(thismap, hcxbnd, hcybnd)
+    hgxbnd, hgybnd, carxbnd = hc2hg(inmap, hcxbnd, hcybnd)
     # Determine the area weighted centroids
     xcenarea = np.sum(xwar * xx[war]) / np.sum(xx[war])
     ycenarea = np.sum(ywar * yy[war]) / np.sum(yy[war])
     hcxarea, hcyarea = px2hc(xcenarea, ycenarea, dx, dy, xc, yc, sz)
-    hgxarea, hgyarea, carxarea = hc2hg(thismap, hcxarea, hcyarea)
+    hgxarea, hgyarea, carxarea = hc2hg(inmap, hcxarea, hcyarea)
     # Determine the Flux weighted centroids
     xcenflx = np.sum(xwar * data[war]) / np.sum(data[war])
     ycenflx = np.sum(ywar * data[war]) / np.sum(data[war])
     hcxflx, hcyflx = px2hc(xcenflx, ycenflx, dx, dy, xc, yc, sz)
-    hgxflx, hgyflx, carxflx = hc2hg(thismap, hcxflx, hcyflx)
+    hgxflx, hgyflx, carxflx = hc2hg(inmap, hcxflx, hcyflx)
     # Fill structure
     posstr = {'arid': arid,
               'xminbnd': xminbnd, 'yminbnd': yminbnd,
@@ -145,13 +145,13 @@ def px2hc(xpx, ypx, dx, dy, xc, yc, sz):
     hcy = ((ypx - (ys/2.))*dy) + yc
     return hcx, hcy
 
-def hc2hg(thismap, hcxbnd, hcybnd):
+def hc2hg(inmap, hcxbnd, hcybnd):
     """Convert heliocentric to heliographic coordinates using sunpy coordinates
     hc coords are in arcsecs
     hg coords are in degrees
     Also outputs Carrington longitude in degrees
     """
-    heliocentric = SkyCoord(hcxbnd, hcybnd, unit='arcsec', frame=thismap.coordinate_frame)
+    heliocentric = SkyCoord(hcxbnd, hcybnd, unit='arcsec', frame=inmap.coordinate_frame)
     heliographic = heliocentric.transform_to(frames.HeliographicStonyhurst)
     carrington = heliographic.transform_to(frames.HeliographicCarrington)
     return heliographic.lon.value, heliographic.lat.value, carrington.lon.value
