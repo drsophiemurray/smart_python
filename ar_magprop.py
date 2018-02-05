@@ -15,14 +15,14 @@ import pandas as pd
 
 magthresh= 350.0 # F; a secondary segmentation threshold (for MDI) used to find all flux fragments in an image
 
-def ar_magprop(map, mask, cosmap):
+def ar_magprop(inmap, inmask, cosmap):
     """.	blankstr={datafile:indatafile[0],arid:0,areabnd:0., posareabnd:0., negareabnd:0., posarea:0., negarea:0., totarea:0., $
           bmax:0d, bmin:0d, bmean:0d, $
           totflx:0., imbflx:0., frcflx:0d, negflx:0., posflx:0.}
     """
-    pxmmsq =  ar_pxscale(map, cmsqr=False, mmppx=False, cmppx=False)
-    pxcmsq = ar_pxscale(map, cmsqr=True, mmppx=False, cmppx=False)
-    nmask = np.max(mask)
+    pxmmsq =  ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=False)
+    pxcmsq = ar_pxscale(inmap, cmsqr=True, mmppx=False, cmppx=False)
+    nmask = np.max(inmask)
     magdf = pd.DataFrame(columns = ['arid',
                                     'areabnd', 'posareanbnd', 'negareabnd',
                                     'posarea', 'negarea', 'totarea',
@@ -33,13 +33,13 @@ def ar_magprop(map, mask, cosmap):
     #For each AR...
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside of detection boundary
-        thismask = np.copy(mask)
-        thismask[np.where(mask != i)] = 0.
-        thisdat = np.copy(map.data)
-        thisdat[np.where(mask != i)] = 0.
+        thismask = np.copy(inmask)
+        thismask[np.where(inmask != i)] = 0.
+        thisdat = np.copy(inmap.data)
+        thisdat[np.where(inmask != i)] = 0.
         thisabs = np.abs(thisdat)
         # Where are values within the detection boundary
-        thismask[np.where(mask == i)] = 1.
+        thismask[np.where(inmask == i)] = 1.
         # Where values above mag threshold
         wthresh = np.where(thisabs >= magthresh)
         # Where negative values above thresh
@@ -51,9 +51,9 @@ def ar_magprop(map, mask, cosmap):
         # Where positive values in boundary
         wposbnd = np.where(thisdat > 0)
         # Magnetic moments calculated for values within boundary [G]
-        bmax = np.max(thisdat[np.where(mask == i)])
-        bmin = np.min(thisdat[np.where(mask == i)])
-        bmean = np.mean(thisdat[np.where(mask == i)])
+        bmax = np.max(thisdat[np.where(inmask == i)])
+        bmin = np.min(thisdat[np.where(inmask == i)])
+        bmean = np.mean(thisdat[np.where(inmask == i)])
         # Area of detection boundary [Mm^2]
         areabnd = np.sum(cosmap * thismask * pxmmsq)
         posareabnd = np.sum(cosmap[wposbnd] * thismask[wposbnd] * pxmmsq)
@@ -73,7 +73,7 @@ def ar_magprop(map, mask, cosmap):
                              'posarea': posarea, 'negarea': negarea, 'totarea': totarea,
                              'bmax': bmax, 'bmin': bmin, 'bmean': bmean,
                              'posflx': posflx, 'negflx': negflx, 'totflx': totflx,
-                             'imbflx': imbflx, 'frcflx': frcflx}])
+                             'imbflx': imbflx, 'frcflx': frcflx}], ignore_index=True)
     return magdf
 
 
