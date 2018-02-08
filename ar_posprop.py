@@ -1,30 +1,18 @@
-# ;Edited by S Murray to get boundaries of blobs for Hexa (2015-07-30)
-# ;Input a processed (pre-run mag cos-corr) data map and mask
-# ;The tot. area, pos. area, neg. area, and
-# ;	total, signed, fractional signed, negative, and positive flux
-# ;	are determined
-# ;The returned structure contains position info for the whole
-# ;detection.
-# ;OUTPOSSTR has position information for the positive pixels in the
-# ;detection
-# ;OUTNEGSTR has position '' for negative ''
-# ;
-# ;Status:
-# ;	0 = initialised value
-# ;	7 = All desired positions should have been calculated
-# ;	1 = No positive pixels found; positive positions not calulated/output
-# ;	2 = No negative pixels found; negative positions not calulated/output
-# ;	3 = No positive or nagative pixels found; Shouldn't happen!! (expect crash in this case)
-# ;	4 = No detection 'where' values found for detection mask; Shouldn't happen!!
-# ;------------------------------------------------------------------------------>
-#
-# ;Determine the AR positions, given mask indices
-# ;Input/Output:
-# ;   inoutstr = a blank structure that will be filled
-# ;Input:
-# ;   WAR = an array of the AR pixel indices
-# ;   DATA = the masked abs(data) array (cosine-area and -mag corrected; in flux units)
-# ;
+'''
+    SMART position property code
+    ============================
+    Written by Sophie A. Murray, code originally developed by Paul Higgins (ar_posprop.pro).
+
+    Developed under Python 3 and Sunpy 0.8.3
+    - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
+
+    Provides position information of detected SMART regions in various coordinate forms.
+
+    Inputs:
+    - inmap: Processed magnetogram
+    - thismask: Output SMART mask from ar_detect_core
+
+'''
 
 import numpy as np
 from ar_detect import xyrcoord, ar_pxscale
@@ -35,11 +23,12 @@ import pandas as pd
 
 def ar_posprop(inmap, thismask, cosmap):
     """
+    Determine the AR positions, given mask indices.
     """
-#    pxmmsq =  ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=False)
+#    pxmmsq = ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=False)
 #    pxcmsq = ar_pxscale(inmap, cmsqr=True, mmppx=False, cmppx=False)
     nmask = np.max(thismask)
-    # Create dataframes
+    ## Create dataframes to output (total, positive, negative)
     ardf = pd.DataFrame(columns = ['arid',
                                    'xminbnd', 'yminbnd', 'xmaxbnd', 'ymaxbnd', 'xcenbnd', 'ycenbnd',
                                    'xcenflx', 'ycenflx', 'xcenarea', 'ycenarea',
@@ -48,19 +37,18 @@ def ar_posprop(inmap, thismask, cosmap):
                                    'carlonbnd', 'carlonflx', 'carlonarea'])
     posdf = ardf.copy()
     negdf = ardf.copy()
-    #For each AR...
+    ## For each AR get position information
     for i in range(1, np.int(nmask)+1):
-        # Zero pixels outside detection boundary
-        #tmpmask = np.copy(thismask)
-        #tmpmask[np.where(thismask != i)] = 0.
+        ## Zero pixels outside detection boundary
+#        tmpmask = np.copy(thismask)
+#        tmpmask[np.where(thismask != i)] = 0.
         tmpdat = np.copy(inmap.data)
         tmpdat[np.where(thismask != i)] = 0.
         tmpabs = np.abs(tmpdat)
         tmpflx = tmpabs*cosmap
-        # Where are values within the detection boundary
-        #tmpmask[np.where(thismask == i)] = 1.
-#        nothresh=0 & nopos=0 & noneg=0 & noposbnd=0 & nonegbnd=0
-        # Where are the signed values
+        ## Where are values within the detection boundary
+#        tmpmask[np.where(thismask == i)] = 1.
+        ## Where are the signed values
 #        wneg = np.where(tmpdat < 0.)
 #        wpos = np.where(tmpdat > 0.)
         # Fill the position structure for whole detection
@@ -72,11 +60,13 @@ def ar_posprop(inmap, thismask, cosmap):
         ardf = ardf.append([arstr], ignore_index=True)
         posdf = posdf.append([posstr], ignore_index=True)
         negdf = negdf.append([negstr], ignore_index=True)
-    #TO DO: ?? check differences in lists between posprop and findpos??
+    #TO DO: check differences in lists between posprop and findpos??
+    ## Currently only outputting total region positional information...
     return ardf#, posdf, negdf
 
 def ar_posprop_findpos(arid, inmap, war, data):
     """
+    Find positional information in diffferent coordinate frames.
     """
     data = np.abs(data)
     date = inmap.meta['t_obs']
@@ -84,15 +74,15 @@ def ar_posprop_findpos(arid, inmap, war, data):
     dy = inmap.meta['cdelt2']
     rsun = inmap.meta["rsun_obs"]
     xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"])
-    #xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*np.cos(inmap.meta["crota2"])*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"]) - inmap.meta["cdelt2"]*np.sin(inmap.meta["crota2"])*(((inmap.meta["naxis2"] + 1)/2) - inmap.meta["crpix2"])
+#    xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*np.cos(inmap.meta["crota2"])*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"]) - inmap.meta["cdelt2"]*np.sin(inmap.meta["crota2"])*(((inmap.meta["naxis2"] + 1)/2) - inmap.meta["crpix2"])
     yc = inmap.meta["crval2"] + inmap.meta["cdelt2"] * (((inmap.meta["naxis2"] + 1) / 2) - inmap.meta["crpix2"])
-    #yc = inmap.meta["crval2"] + inmap.meta["cdelt1"]*np.sin(inmap.meta["crota2"])*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"]) + inmap.meta["cdelt2"]*np.cos(inmap.meta["crota2"])*(((inmap.meta["naxis2"] + 1)/2) - inmap.meta["crpix2"])
-    # get x and y indices
+#    yc = inmap.meta["crval2"] + inmap.meta["cdelt1"]*np.sin(inmap.meta["crota2"])*(((inmap.meta["naxis1"] + 1)/2) - inmap.meta["crpix1"]) + inmap.meta["cdelt2"]*np.cos(inmap.meta["crota2"])*(((inmap.meta["naxis2"] + 1)/2) - inmap.meta["crpix2"])
+    ## Get x and y indices
     sz = inmap.data.shape
     xx, yy, rr = xyrcoord(sz)
     xwar = war[1]
     ywar = war[0]
-    # Determine the bounding box center positions
+    ## Determine the bounding box center positions
     xminmax = np.array((np.min(xwar), np.max(xwar)))
     yminmax = np.array((np.min(ywar), np.max(ywar)))
     xcenbnd = np.mean(xminmax) #in pixels from lower left corner of the image FOV
@@ -102,19 +92,18 @@ def ar_posprop_findpos(arid, inmap, war, data):
     xmaxbnd = xminmax[1]
     ymaxbnd = yminmax[1]
     hcxbnd, hcybnd = px2hc(xcenbnd, ycenbnd, dx, dy, xc, yc, sz)
-    #hgxbnd, hgybnd, carxbnd = hc2hg(hcxbnd, hcybnd, date, rsun, carx=True)
-    hgxbnd, hgybnd, carxbnd = hc2hg(inmap, hcxbnd, hcybnd)
-    # Determine the area weighted centroids
+    hgxbnd, hgybnd, carxbnd = hc2hg(inmap, hcxbnd, hcybnd) #old version used cxbnd, hcybnd, date, rsun, carx=True
+    ## Determine the area weighted centroids
     xcenarea = np.sum(xwar * xx[war]) / np.sum(xx[war])
     ycenarea = np.sum(ywar * yy[war]) / np.sum(yy[war])
     hcxarea, hcyarea = px2hc(xcenarea, ycenarea, dx, dy, xc, yc, sz)
     hgxarea, hgyarea, carxarea = hc2hg(inmap, hcxarea, hcyarea)
-    # Determine the Flux weighted centroids
+    ## Determine the Flux weighted centroids
     xcenflx = np.sum(xwar * data[war]) / np.sum(data[war])
     ycenflx = np.sum(ywar * data[war]) / np.sum(data[war])
     hcxflx, hcyflx = px2hc(xcenflx, ycenflx, dx, dy, xc, yc, sz)
     hgxflx, hgyflx, carxflx = hc2hg(inmap, hcxflx, hcyflx)
-    # Fill structure
+    ## Fill structure
     posstr = {'arid': arid,
               'xminbnd': xminbnd, 'yminbnd': yminbnd,
               'xmaxbnd': xmaxbnd, 'ymaxbnd': ymaxbnd,
@@ -132,12 +121,13 @@ def ar_posprop_findpos(arid, inmap, war, data):
 
 
 def px2hc(xpx, ypx, dx, dy, xc, yc, sz):
-    """Given positions in pixel coordinates (x = [0->nx-1]; y = [0->ny-1]),
+    """
+    Given positions in pixel coordinates (x = [0->nx-1]; y = [0->ny-1]),
     determine the HC x and y coordinates in arcseconds.
-    xpx, ypx = pixel coordinates of AR positions.
-    dx, dy = arcsec/px
-    xc, yc = FOV center in arcsec from solar disk center
-    xs, ys = x and y px size of the image
+    - xpx, ypx = pixel coordinates of AR positions
+    - dx, dy = arcsec/px
+    - xc, yc = FOV center in arcsec from solar disk center
+    - xs, ys = x and y px size of the image
     """
     xs = sz[0]
     ys = sz[1]
@@ -146,7 +136,8 @@ def px2hc(xpx, ypx, dx, dy, xc, yc, sz):
     return hcx, hcy
 
 def hc2hg(inmap, hcxbnd, hcybnd):
-    """Convert heliocentric to heliographic coordinates using sunpy coordinates
+    """
+    Convert heliocentric to heliographic coordinates using sunpy coordinates.
     hc coords are in arcsecs
     hg coords are in degrees
     Also outputs Carrington longitude in degrees
@@ -155,15 +146,5 @@ def hc2hg(inmap, hcxbnd, hcybnd):
     heliographic = heliocentric.transform_to(frames.HeliographicStonyhurst)
     carrington = heliographic.transform_to(frames.HeliographicCarrington)
     return heliographic.lon.value, heliographic.lat.value, carrington.lon.value
-
-
-def old_hc2hg(hcxbnd, hcybnd, date, rsun, carx):
-    """Convert heliocentric to heliographic coordinates using the usual SSW routines.
-    hc coords are in arcsecs
-    hg coords are in degrees
-    rsun is in arcsec
-    Optionally outputs the Carrington longitude
-    """
-    return
 
 
