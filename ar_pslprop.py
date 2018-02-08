@@ -46,31 +46,31 @@ from skimage import measure
 from astropy.convolution import convolve, Box2DKernel
 
 
-def ar_pslprop(map, mask, doproj, projmaxscale):
+def ar_pslprop(inmap, inmask, doproj, projmaxscale):
     """.arpslstr={arid:0,psllength:0.,pslsglength:0.,pslcurvature:0d,rvalue:0.,wlsg:0.,bipolesep_mm:0.,bipolesep_px:0.,bipolesep_proj:0.}
     """
-    sz = map.data.shape
-    xscale = map.meta['cdelt1']
-    nmask = np.max(mask)
+    sz = inmap.data.shape
+    xscale = inmap.meta['cdelt1']
+    nmask = np.max(inmask)
     psldf = pd.DataFrame(columns = ['arid',
                                     'psllength', 'pslsglength', 'pslcurvature',
                                     'rvalue', 'wlsg',
                                     'bipolesep_mm', 'bipolesep_px'])#TO DO ADD FOLLOWING:, 'bipolesep_proj'])
     for i in range(1, np.int(nmask)+1):
         # Zero pixels outside detection boundary
-        tmpmask = np.copy(mask)
-        tmpmask[np.where(mask != i)] = 0.
-        tmpmask[np.where(mask == i)] = 1.
-        tmpdat = map.data*tmpmask
+        tmpmask = np.copy(inmask)
+        tmpmask[np.where(inmask != i)] = 0.
+        tmpmask[np.where(inmask == i)] = 1.
+        tmpdat = inmap.data*tmpmask
         # Take a sub-map around the AR
-        tmpdatmap = sunpy.map.Map(tmpdat, map.meta)
-        maskmap = sunpy.map.Map(tmpmask, map.meta)
+        tmpdatmap = sunpy.map.Map(tmpdat, inmap.meta)
+        maskmap = sunpy.map.Map(tmpmask, inmap.meta)
         #xrange = ((np.min(np.where(tmpmask == 1)[1])-1, np.max(np.where(tmpmask == 1)[1])+1))
         #yrange = ((np.min(np.where(tmpmask == 1)[0])-1, np.max(np.where(tmpmask == 1)[0])+1))
         bottom_left_pixels = ((np.min(np.where(tmpmask == 1)[1])-1, np.min(np.where(tmpmask == 1)[0])-1))
-        #bl = pix_to_arc(map, bottom_left_pixels[0], bottom_left_pixels[1])
+        #bl = pix_to_arc(inmap, bottom_left_pixels[0], bottom_left_pixels[1])
         top_right_pixels = ((np.max(np.where(tmpmask == 1)[1])+1, np.max(np.where(tmpmask == 1)[0])+1))
-        #tr = pix_to_arc(map, top_right_pixels[0], top_right_pixels[1])
+        #tr = pix_to_arc(inmap, top_right_pixels[0], top_right_pixels[1])
         submask = maskmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
         submag = tmpdatmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
         #Convert to wcs structure?? doesnt seem to be used! -- converted map to Helioprojective-Cartesian
@@ -113,7 +113,7 @@ def ar_pslprop(map, mask, doproj, projmaxscale):
         pslmask = np.zeros(projmagg.shape)
         pslmask[np.where(pmaskg + nmaskg == 2)] = 1.
         gradmag = ar_losgrad(projmagg)
-        mapscl = ar_pxscale(map, cmsqr=False, mmppx=True, cmppx=False)
+        mapscl = ar_pxscale(inmap, cmsqr=False, mmppx=True, cmppx=False)
         gradpsl = pslmask*gradmag*projmmscl/mapscl
         pslmaskthresh = np.copy(pslmask)
         pslmaskthresh[np.where(gradpsl < psl_grad)] = 0.
@@ -158,11 +158,11 @@ def ar_pslprop(map, mask, doproj, projmaxscale):
         # thispslstr.bipolesep_proj = bipsepstrproj.pxsep
     return psldf
 
-def ar_bipolesep(map):
+def ar_bipolesep(inmap):
     """Determine the flux-weighted bipole separation distance between the pos and neg centroids
     ;in degrees if a map is input, or in Px if only an image is input
     """
-    image = np.copy(map.data)
+    image = np.copy(inmap.data)
     imgsz = image.shape
     yy, xx, rr = xyrcoord(imgsz) #need to check this shit theres definitely something wrong - array flipped
     imageneg = np.copy(image)
@@ -175,15 +175,15 @@ def ar_bipolesep(map):
     nypxloc = np.sum(yy * np.abs(imageneg)) / np.sum(np.abs(imageneg))
     pxsep = np.sqrt((pxpxloc-nxpxloc)**2.+(pypxloc-nypxloc)**2.)
     # Now the map outputs
-    xc = map.meta["crval1"] + map.meta["cdelt1"]*(((map.meta["naxis1"] + 1) / 2) - map.meta["crpix1"])
-    yc = map.meta["crval2"] + map.meta["cdelt2"] * (((map.meta["naxis2"] + 1) / 2) - map.meta["crpix2"])
-    phcxflx, phcyflx = px2hc(pxpxloc, pypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
-    phgxflx, phgyflx, carpxflx = hc2hg(map, phcxflx, phcyflx)
-    nhcxflx, nhcyflx = px2hc(nxpxloc, nypxloc, map.meta['cdelt1'], map.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
-    nhgxflx, nhgyflx, carnxflx = hc2hg(map, nhcxflx, nhcyflx)
+    xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*(((inmap.meta["naxis1"] + 1) / 2) - inmap.meta["crpix1"])
+    yc = inmap.meta["crval2"] + inmap.meta["cdelt2"] * (((inmap.meta["naxis2"] + 1) / 2) - inmap.meta["crpix2"])
+    phcxflx, phcyflx = px2hc(pxpxloc, pypxloc, inmap.meta['cdelt1'], inmap.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
+    phgxflx, phgyflx, carpxflx = hc2hg(inmap, phcxflx, phcyflx)
+    nhcxflx, nhcyflx = px2hc(nxpxloc, nypxloc, inmap.meta['cdelt1'], inmap.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
+    nhgxflx, nhgyflx, carnxflx = hc2hg(inmap, nhcxflx, nhcyflx)
     gcdist_deg, outeqnode,  outadist = gc_dist(np.array((phgxflx, phgyflx)), np.array((nhgxflx, nhgyflx)), nonan=False)
     gcdist_mm = (gcdist_deg / 360.) * 2. * np.pi * (constants.radius.value / 1e6)
-    gcdist_px = (gcdist_deg / 360.) * 2. * np.pi * (map.meta['rsun_obs'] / map.meta['cdelt1'])
+    gcdist_px = (gcdist_deg / 360.) * 2. * np.pi * (inmap.meta['rsun_obs'] / inmap.meta['cdelt1'])
     sepstr = {'pxcen': pxpxloc, 'pycen': pypxloc, 'nxcen': nxpxloc, 'nycen': nypxloc,
               'plon': phgxflx, 'plat': phgyflx, 'nlon': nhgxflx, 'nlat': nhgyflx, 'pxsep': pxsep,
               'gdist_deg': gcdist_deg, 'gcdist_mm': gcdist_mm, 'gcdist_px': gcdist_px}
@@ -270,13 +270,14 @@ def ar_losgrad(data):
     gradmag = np.sqrt(xgrad**2. + ygrad**2.)
     return gradmag[5:imgsz[0] + 5, 5:imgsz[1] + 5]
 
-def ar_largest_blob(mask, data):
+def ar_largest_blob(inmask, data):
     """
     ;Input MASK with 1=feature, 0=quiet
     ;Returns MASK with all features zeroed except for the largest
     ;set flux to take the flux weighted largest blob
     """
-    masksep = measure.label(mask, background=0)
+    outmask = np.copy(inmask)
+    masksep = measure.label(inmask, background=0)
     ncont = np.max(masksep)
     narr = np.zeros(ncont)
     for i in range(1, np.int(ncont)+1):
@@ -284,8 +285,8 @@ def ar_largest_blob(mask, data):
     wnbest = np.int((np.where(narr == np.max(narr)))[0] + 1.)
     wbig = np.where(masksep == wnbest)
     w0 = np.where(masksep != wnbest)
-    mask[w0] = 0.
-    return mask
+    outmask[w0] = 0.
+    return outmask
 
 def ar_r_smear(image, szkernel):
     """
@@ -334,9 +335,9 @@ def ar_r_smear(image, szkernel):
     return convolve(image, kernel)
 
 
-def pix_to_arc(map, x, y):
+def pix_to_arc(inmap, x, y):
     """Convert pixel location to arcsecond location in map
     """
-    arc_x = (x - (map.meta['crpix1'] - 1)) * map.meta['cdelt1'] + map.meta['crval1']
-    arc_y = (y - (map.meta['crpix2'] - 1)) * map.meta['cdelt2'] + map.meta['crval2']
+    arc_x = (x - (inmap.meta['crpix1'] - 1)) * inmap.meta['cdelt1'] + inmap.meta['crval1']
+    arc_y = (y - (inmap.meta['crpix2'] - 1)) * inmap.meta['cdelt2'] + inmap.meta['crval2']
     return ((arc_x, arc_y))
