@@ -74,7 +74,6 @@ def ar_detect(thismap, limbmask):
     maskmap = sunpy.map.Map(maskfull, thismap.meta)
     return maskmap
 
-
 def gauss_smooth(thismap, rsgrad, cmpmm):
     """
     Gaussian smooth the magnetogram
