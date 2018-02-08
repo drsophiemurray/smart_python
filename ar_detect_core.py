@@ -106,7 +106,7 @@ def ar_detect_core(inmap, inmask):
     arcoremap = sunpy.map.Map(arcoremaskmpoleid, inmap.meta)
     pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, inmap.meta)
     ## Optional outputs, that for now have not been included..
-    smartmaskmap = sunpy.map.Map(smartmask*psltrace, inmap.meta) #a SMART mask of 0's and 1's
+    smartmaskmap = sunpy.map.Map(inmask*psltrace, inmap.meta) #a SMART mask of 0's and 1's
     smartconnmap = sunpy.map.Map(arcoresmartcomb*psltrace, inmap.meta) #a SMART mask with only the blobs that are touching cores
     return arcoremap, pslmaskmap
 
