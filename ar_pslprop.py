@@ -1,36 +1,27 @@
-# ;Determine many PSL properties of an AR
-# ;
-# ;INPUTS:
-# ;	inmap = data map of magnetogram
-# ;	inmask = indexed image mask of detected features
-# ;
-# ;OPT. INPUTS:
-# ;	refimg = an image to be projected in the same manner as the data and mask
-# ;
-# ;KEYWORDS:
-# ;	param = The SMART2 parameter structure
-# ;	fparam = Filename of desired parameter structure to use (PARAM takes precedence)
-# ;	doproj = set to do a stereographic deprojection when determining PSL props.
-# ;	projscl = DEFUNCT choose the factor to increase the projection image dimensions by, as compared to the original image
-# ;	dobppxscl = set to use the bipole separation length to determine the deprojected pixel scaling (= bp_sep/bp_sep_proj)
-# ;	outproj = ouput the STG projected magnetogram
-# ;	outscl = output the 'true' pixel scaling for each projected pixel using the gradient of Rdeg map
-# ;	outbpscl = output the conversion between great-circle and STG projected bipole separation length to use as conversion between scaling
-# ;	outmaskproj = STG projected mask
-# ;	outrefproj = STG projected version of input REFIMG
-# ;	projlimbxy = x,y positions of the limb in STG projected space
-# ;	outpslmask = mask of PSL in STG space
-# ;	outgradpsl = gradient image of PSL in STG space
-# ;
-# ;NOTES:
-# ;	1. If /DOPROJ is NOT set, then all outputs labeled 'STG projected' will just be in LOS (HCP) space, corresponding to the input map.
+'''
+    SMART PIL property code
+    =======================
+    Written by Sophie A. Murray, code originally developed by Paul Higgins (ar_pslprop.pro).
 
-projscl = 1.5 # F; the fractional increase/decrease in image size for the projected image
-mdi_noisethresh = 70.0 #; F; a noise threshold used in processing MDI magnetograms
-psl_grad =  250. # F; a gradient threshold for determining the location of strong-gradient PSL
-r_kernsz = 10 # I; the FWHM of the smoothing kernal for calculating Schrijver R value
+    Developed under Python 3 and Sunpy 0.8.3
+    - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
+
+    Provides polarity inversion line complex magnetic properties of detected SMART regions.
+
+    Inputs:
+    - inmap: Processed magnetogram
+    - inmask: Output SMART mask from ar_detect_core
+    - doproj: If TRUE will do a stereographic deprojection when determining properties
+    - projmaxscale: ??
+    - projscl: Fractional increase/decrease in image size for the projected image
+    (factor to change dimension compared to original)
+    - noisethresh: Noise threshold used for magnetogram processing
+    - psl_grad: Gradient threshold for determining the location of strong-gradient PSL
+    - r_kernsz: FWHM of the smoothing kernal for calculating Schrijver R value
+'''
 
 
+from configparser import ConfigParser
 import numpy as np
 import sunpy.map
 from ar_detect import xyrcoord, ar_grow, ar_pxscale
@@ -47,34 +38,40 @@ from astropy.convolution import convolve, Box2DKernel
 
 
 def ar_pslprop(inmap, inmask, doproj, projmaxscale):
-    """.arpslstr={arid:0,psllength:0.,pslsglength:0.,pslcurvature:0d,rvalue:0.,wlsg:0.,bipolesep_mm:0.,bipolesep_px:0.,bipolesep_proj:0.}
     """
+    Determine complex PIL magnetic properties.
+    """
+    ## Load configuration file
+    config = ConfigParser()
+    config.read("config.ini")
+    ## Set up parameters and output dataframe
     sz = inmap.data.shape
     xscale = inmap.meta['cdelt1']
     nmask = np.max(inmask)
     psldf = pd.DataFrame(columns = ['arid',
                                     'psllength', 'pslsglength', 'pslcurvature',
                                     'rvalue', 'wlsg',
-                                    'bipolesep_mm', 'bipolesep_px'])#TO DO ADD FOLLOWING:, 'bipolesep_proj'])
+                                    'bipolesep_mm', 'bipolesep_px']) #TO DO ADD FOLLOWING:, 'bipolesep_proj'])
     for i in range(1, np.int(nmask)+1):
-        # Zero pixels outside detection boundary
+        ## Zero pixels outside detection boundary
         tmpmask = np.copy(inmask)
         tmpmask[np.where(inmask != i)] = 0.
         tmpmask[np.where(inmask == i)] = 1.
         tmpdat = inmap.data*tmpmask
-        # Take a sub-map around the AR
+        ## Take a sub-map around the AR
         tmpdatmap = sunpy.map.Map(tmpdat, inmap.meta)
         maskmap = sunpy.map.Map(tmpmask, inmap.meta)
-        #xrange = ((np.min(np.where(tmpmask == 1)[1])-1, np.max(np.where(tmpmask == 1)[1])+1))
-        #yrange = ((np.min(np.where(tmpmask == 1)[0])-1, np.max(np.where(tmpmask == 1)[0])+1))
+#        xrange = ((np.min(np.where(tmpmask == 1)[1])-1, np.max(np.where(tmpmask == 1)[1])+1))
+#        yrange = ((np.min(np.where(tmpmask == 1)[0])-1, np.max(np.where(tmpmask == 1)[0])+1))
         bottom_left_pixels = ((np.min(np.where(tmpmask == 1)[1])-1, np.min(np.where(tmpmask == 1)[0])-1))
-        #bl = pix_to_arc(inmap, bottom_left_pixels[0], bottom_left_pixels[1])
+#        bl = pix_to_arc(inmap, bottom_left_pixels[0], bottom_left_pixels[1])
         top_right_pixels = ((np.max(np.where(tmpmask == 1)[1])+1, np.max(np.where(tmpmask == 1)[0])+1))
-        #tr = pix_to_arc(inmap, top_right_pixels[0], top_right_pixels[1])
+#        tr = pix_to_arc(inmap, top_right_pixels[0], top_right_pixels[1])
         submask = maskmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
         submag = tmpdatmap.submap(bottom_left_pixels * u.pixel, top_right_pixels * u.pixel)
-        #Convert to wcs structure?? doesnt seem to be used! -- converted map to Helioprojective-Cartesian
-        # Determine the bipole separation properties
+        # Convert to wcs structure?? doesnt seem to be used! -- converted map to Helioprojective-Cartesian
+        #
+        ## Determine the bipole separation properties
         bipsepstr = ar_bipolesep(submag)
         # Stereographic deprojection --- TO DO!!!!! DOPROJ=1
         if doproj is False:
@@ -85,18 +82,19 @@ def ar_pslprop(inmap, inmask, doproj, projmaxscale):
             bisepstrproj = bipsepstr
             projpxscl_bpsep = 1.
         projsz = projmag.shape
-        # Choose whether to use the Rdeg gradient or the bipole separation conversion to determine the projected pixel scaling
-        #commented out below as dont get the point of it (seems to divide by itself later to equal zero)
-        #if dobppxscl is True:
-        #    projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl_bpsep
-        #else:
-        #    projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl
+        #
+        ## Choose whether to use the Rdeg gradient or the bipole separation conversion to determine the projected pixel scaling
+        # commented out below as dont get the point of it (seems to divide by itself later to equal zero)
+#        if dobppxscl is True:
+#            projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl_bpsep
+#        else:
+#            projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl
         projmmscl = ar_pxscale(submag, cmsqr=False, mmppx=True, cmppx=False) * projpxscl_bpsep
         kernpsl = [[0, 0, 1, 1, 1, 0, 0], [0, 1, 1, 1, 1, 1, 0], [1, 1, 1, 1, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1],
                    [1, 1, 1, 1, 1, 1, 1], [0, 1, 1, 1, 1, 1, 0], [0, 0, 1, 1, 1, 0, 0]]
         kernpsl = np.array(kernpsl)
         kernsz = kernpsl.shape
-        # Resize the kernel based on the scale conversion
+        ## Resize the kernel based on the scale conversion
         if ((np.min(kernsz[0]/projpxscl_bpsep) < 1) is True) or (np.isnan(np.min(kernsz[0]/projpxscl_bpsep)) is True):
             kernpsl = rebin(kernpsl, (kernsz[0], kernsz[1]))
         else:
@@ -106,8 +104,8 @@ def ar_pslprop(inmap, inmask, doproj, projmaxscale):
         psz = projmagg.shape
         nmask = np.zeros(projmagg.shape)
         pmask = np.copy(nmask)
-        nmask[np.where(projmagg < (-mdi_noisethresh*2))] = 1.
-        pmask[np.where(projmagg > mdi_noisethresh*2)] = 1.
+        nmask[np.where(projmagg < (-np.float(config.get('properties', 'noisethresh'))*2))] = 1.
+        pmask[np.where(projmagg > np.float(config.get('properties', 'noisethresh'))*2)] = 1.
         pmaskg = ar_grow(pmask, 1./2., gauss=False, kern=kernpsl)
         nmaskg = ar_grow(nmask, 1./2., gauss=False, kern=kernpsl)
         pslmask = np.zeros(projmagg.shape)
@@ -116,19 +114,21 @@ def ar_pslprop(inmap, inmask, doproj, projmaxscale):
         mapscl = ar_pxscale(inmap, cmsqr=False, mmppx=True, cmppx=False)
         gradpsl = pslmask*gradmag*projmmscl/mapscl
         pslmaskthresh = np.copy(pslmask)
-        pslmaskthresh[np.where(gradpsl < psl_grad)] = 0.
+        pslmaskthresh[np.where(gradpsl < np.float(config.get('properties', 'psl_grad')))] = 0.
         pslmaskt = skeletonize(pslmask)
         pslmaskt_thresh = skeletonize(pslmaskthresh)
-        # Find the largest segment of PSL and indicate terminals
-        #pslmaskt_skel = skeletonize(ar_largest_blob(pslmask, gradpsl))
+        #
+        ## Find the largest segment of PSL and indicate terminals
+#        pslmaskt_skel = skeletonize(ar_largest_blob(pslmask, gradpsl))
         # Large commented out section skipped
-        # Determine the longest PSLs Skeleton length and curvature
+        ## Determine the longest PSLs skeleton length and curvature
         pslcurvature = 0.
         meanmmscl = np.mean(projmmscl)
         psllength = np.sum(pslmaskt * projmmscl)
         psllengtht = np.sum(pslmaskt_thresh * projmmscl) #strong
-        # Determine R
-        # compute pos and neg polarity maps, with product defining polarity inversion line:
+        #
+        ## Determine R
+        # Compute pos and neg polarity maps, with product defining polarity inversion line:
         prim = np.copy(rim)
         prim[np.where(rim < 150.)] = 0.
         p1p = convolve(prim, Box2DKernel(3))
@@ -137,17 +137,18 @@ def ar_pslprop(inmap, inmask, doproj, projmaxscale):
         nrim[np.where(rim > -150.)] = 0.
         p1n = convolve(nrim, Box2DKernel(3))
         p1n[np.where(p1n < 0)] = 1.
-        pmap = ar_r_smear((p1p * p1n), r_kernsz)
+        pmap = ar_r_smear((p1p * p1n), np.int(config.get('properties', 'r_kernsz')))
         rmap = pmap*np.abs(rim)
         rmap[np.where(rmap < 0.)] = 1.
         rmasked = rmap * projmask
         rmasked[np.where(np.isnan(rmasked))] = 0.
         thisr = np.sum(rmasked)
-        # DETERMINE SUMMED GRADIENT (WLsg)
+        ## Determine summed gradient (WLsg)
         wlsgdat = gradpsl * pslmask #thresh
         wlsgdat[np.where(np.isnan(wlsgdat))] = 0.
         thiswlsg = np.sum(wlsgdat)
-        # Fill structure
+        #
+        ## Fill structure
         psldf = psldf.append([{'arid': i,
                                'psllength': psllength, 'pslsglength': psllengtht, 'pslcurvature': pslcurvature,
                                'rvalue': thisr, 'wlsg': thiswlsg,
@@ -159,8 +160,9 @@ def ar_pslprop(inmap, inmask, doproj, projmaxscale):
     return psldf
 
 def ar_bipolesep(inmap):
-    """Determine the flux-weighted bipole separation distance between the pos and neg centroids
-    ;in degrees if a map is input, or in Px if only an image is input
+    """
+    Determine the flux-weighted bipole separation distance between the pos and neg centroids
+    Note: in degrees if a map is input, or in Px if only an image is input
     """
     image = np.copy(inmap.data)
     imgsz = image.shape
@@ -174,7 +176,7 @@ def ar_bipolesep(inmap):
     pypxloc = np.sum(yy * imagepos) / np.sum(imagepos)
     nypxloc = np.sum(yy * np.abs(imageneg)) / np.sum(np.abs(imageneg))
     pxsep = np.sqrt((pxpxloc-nxpxloc)**2.+(pypxloc-nypxloc)**2.)
-    # Now the map outputs
+    ## Now the map outputs
     xc = inmap.meta["crval1"] + inmap.meta["cdelt1"]*(((inmap.meta["naxis1"] + 1) / 2) - inmap.meta["crpix1"])
     yc = inmap.meta["crval2"] + inmap.meta["cdelt2"] * (((inmap.meta["naxis2"] + 1) / 2) - inmap.meta["crpix2"])
     phcxflx, phcyflx = px2hc(pxpxloc, pypxloc, inmap.meta['cdelt1'], inmap.meta['cdelt2'], xc, yc, imgsz[::-1]) #again flipped wtf
@@ -193,31 +195,31 @@ def gc_dist(alonlat, blonlat, nonan):
     """
     Return the distance along the great circle between two reference points from Leonard (1953)
     Coordinates are in geographic longitude latitude
-    alonlat: first reference point on great circle (GC), [longitude, latitude] in degrees
-    blonlat: second reference point on great circle (GC), [longitude, latitude] in degrees
-    OutEqNode: output the location of the nearest equatorial node to the reference point in degrees
-    OutADist: distance between reference point A and the equatorial node of the GC. in degrees
-    NoNaN: where ALONLAT is equal to BLONLAT GC_DIST will return a NaN. To replace the NaNs with 0, set /NoNaN
+    - alonlat: first reference point on great circle (GC), [longitude, latitude] in degrees
+    - blonlat: second reference point on great circle (GC), [longitude, latitude] in degrees
+    - nlatlon: the location of the nearest equatorial node to the reference point in degrees
+    - outda: distance between reference point A and the equatorial node of the GC. in degrees
+    Where alonlat is equal to blonlat, gc_dist will return a NaN. To replace the NaNs with 0, set nonan TRUE.
     """
     # Bit of a fudge apparently - looks like he doesnt want zeros
     alonlat[np.where(alonlat == 0.)] = 0.001
     blonlat[np.where(blonlat == 0.)] = 0.001
-    # Inclination between GC and equator
+    ## Inclination between GC and equator
     inc, nlonlat = gc_inc(alonlat, blonlat)
-    # Convert to radians
+    ## Convert to radians
     alonlat = np.radians(alonlat)
     blonlat = np.radians(blonlat)
     nlonlat = np.radians(nlonlat)
-    # Distance of equatorial node to point A along GC
+    ## Distance of equatorial node to point A along GC
     da = np.arccos(np.cos(alonlat[0] - nlonlat) * np.cos(alonlat[1]))
     outda = np.degrees(da)
     db = np.arccos(np.cos(blonlat[0] - nlonlat) * np.cos(blonlat[1]))
-    # Distance between the two points
+    ## Distance between the two points
     alatsign = alonlat[1] / np.abs(alonlat[1])
     blatsign = blonlat[1] / np.abs(blonlat[1])
     diffhemisign = alatsign * blatsign
     dd = np.abs(da - db * diffhemisign)
-    # Find the mid point position between the two reference points
+    ## Find the mid point position between the two reference points
     dmid = -(da + db)/2.
     mlon = np.arctan(np.tan(dmid) * np.cos(inc)) + (nlonlat)
     mlat = np.arctan(np.tan(inc) * np.sin(mlon - nlonlat))
@@ -226,32 +228,31 @@ def gc_dist(alonlat, blonlat, nonan):
     if nonan is True:
         if np.isnan(dd) is True:
             dd = 0.
-    # Convert the distance to degrees
+    ## Convert the distance to degrees
     dist = np.degrees(dd)
     # When distances go above 180deg they are wrong! Subtract from 360.
     if (dist > 180.) is True:
         dist = 360. - dist
-    #return various things
     return dist, outda, outmid
 
 def gc_inc(alonlat, blonlat):
     """"
     Returns the inclination between the arc connecting two reference points along a GC and the equator from Leonard 1953
     Coordinates are in geographic longitude latitude
-    alonlat: first reference point on great circle (GC), [longitude, latitude] in degrees
-    blonlat: second reference point on great circle (GC), [longitude, latitude] in degrees
+    - alonlat: first reference point on great circle (GC), [longitude, latitude] in degrees
+    - blonlat: second reference point on great circle (GC), [longitude, latitude] in degrees
     """
-    # Convert to radians
+    ## Convert to radians
     alonlat = np.radians(alonlat)
     blonlat = np.radians(blonlat)
     # Try to correct for problem when determining angles when A and B are on either side of the equator
     lonshift = alonlat[0]
-    # Get position of equatorial node nearest to reference mid point between A and B
+    ## Get position of equatorial node nearest to reference mid point between A and B
     nlonlat = np.arctan( (np.sin(alonlat[0] - lonshift) * np.tan(blonlat[1]) - np.sin(blonlat[0] - lonshift) * np.tan(alonlat[1]))
                       / (np.cos(alonlat[0] - lonshift) * np.tan(blonlat[1]) - np.cos(blonlat[0] - lonshift) * np.tan(alonlat[1])) ) + lonshift
-    #nlonlat = np.array((nlon, nlon.size-1)) #dont see why this is necessary so commenting out
+#    nlonlat = np.array((nlon, nlon.size-1)) #dont see why this is necessary so commenting out
     nlonlat = np.degrees(nlonlat)
-    # Get inclination between GC and equator
+    ## Get inclination between GC and equator
     inc = np.arctan(np.tan(alonlat[1]) / np.sin(alonlat[0] - nlonlat))
     return inc, nlonlat
 
@@ -259,7 +260,7 @@ def ar_losgrad(data):
     """
     Take the gradient in the horizontal plane of the LOS magnetic field.
     """
-    # Buffer the image to reduce edge effects
+    ## Buffer the image to reduce edge effects
     imgsz = data.shape
     dataint = np.zeros([imgsz[0]+10,imgsz[1]+10])
     dataint[:] = np.nan
@@ -272,9 +273,8 @@ def ar_losgrad(data):
 
 def ar_largest_blob(inmask, data):
     """
-    ;Input MASK with 1=feature, 0=quiet
-    ;Returns MASK with all features zeroed except for the largest
-    ;set flux to take the flux weighted largest blob
+    For input mask with 1=feature, 0=quiet, returns mask with all features zeroed except for the largest.
+    Set flux to take the flux weighted largest blob
     """
     outmask = np.copy(inmask)
     masksep = measure.label(inmask, background=0)
@@ -290,40 +290,19 @@ def ar_largest_blob(inmask, data):
 
 def ar_r_smear(image, szkernel):
     """
-;+
-;  NAME:
-;    ar_r_smear
-;  PURPOSE:
-;    convolve an image with [default] a gaussian profile of FWHM width
-;    n and boxwidth 4n, or alternatively with a specified kernel
-;
-;  CALLING SEQUENCE:
-;    image=ar_r_smear(image,n,kernel=kernel)
-;
-;  INPUTS:
-;    image  image to be processed
-;    n      fwhm value of the gaussian smearing that is applied
-;
-;  OUTPUTS:
-;           returns convolved image
-;
-;  OPTIONAL INPUT KEYWORDS:
-;    kernal        convolution kernel, 2d real array
-;   [edge_truncate as in IDL routine convol - obsolete 2006/04/17, see below]
-;
-;  OPTIONAL OUTPUT KEYWORDS:
-;
-;  METHOD:
-;    uses standard IDL routine convol
-;
-;  MODIFICATION HISTORY:
-;	C.J. Shcrijver - 11-Feb-2014 - written
-;	P.A. Higgins - 12-Feb-2014 - modified using M. Bobra's suggestion (changed
-;		kernal width to 4*n+1 rather than 4n) and standardised code to fit
-;		within the SMART_LIBRARY repository:
-;		http://github.com/pohuigin/smart_library/
-;
-;-
+    Convolve an image with [default] a gaussian profile of FWHM width n
+    and boxwidth 4n, or alternatively with a specified kernel
+
+    - image: image to be processed
+    -szkernel: fwhm value of the gaussian smearing that is applied
+
+    Modifcation history:
+    - C.J. Shcrijver: 11-Feb-2014 - written
+    - P.A. Higgins: 12-Feb-2014 - modified using M. Bobra's suggestion (changed
+        kernal width to 4*n+1 rather than 4n) and standardised code to fit
+        within the SMART_LIBRARY repository:
+        http://github.com/pohuigin/smart_library/
+    - S.A. Murray: 2017 - converted to Python
     """
     n = szkernel
     sigma = n / (2. * np.sqrt(2. * np.log(2.)))
@@ -334,9 +313,9 @@ def ar_r_smear(image, szkernel):
     kernel = kernel/np.sum(kernel)
     return convolve(image, kernel)
 
-
 def pix_to_arc(inmap, x, y):
-    """Convert pixel location to arcsecond location in map
+    """
+    Convert pixel location to arcsecond location in map
     """
     arc_x = (x - (inmap.meta['crpix1'] - 1)) * inmap.meta['cdelt1'] + inmap.meta['crval1']
     arc_y = (y - (inmap.meta['crpix2'] - 1)) * inmap.meta['cdelt2'] + inmap.meta['crval2']
