@@ -34,7 +34,8 @@ import cv2
 
 
 def ar_detect(thismap, limbmask):
-    """Make detection mask of ARs with mask values ordered.
+    """
+    Make detection mask of ARs with mask values ordered.
     """
     ## Load configuration file
     config = ConfigParser()
@@ -52,43 +53,40 @@ def ar_detect(thismap, limbmask):
     mask[wmask] = 1.
     ## Segment the non-smoothed magnetogram to grab near by fragments and connect adjacent blobs
     fragmask = np.zeros(sz)
-    wfrag = np.where(np.abs(thismap.data) >  np.float(config.get('detection', 'magthresh')))
+    wfrag = np.where(np.abs(thismap.data) > np.float(config.get('detection', 'magthresh')))
     fragmask[wfrag] = 1.
     smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False, kern=None)
     ## Region grow the smooth detections
     poismask = np.where(mask == 1.)
-    # wgrow=region_grow(smfragmask,poismask,thresh=[0.5,1.5]) #array, where to grow, threshold between which new region should fall
-    #grmask = mask
-    #grmask[wgrow] = 1
-    # https://stackoverflow.com/questions/31848309/classifying-python-array-by-nearest-seed-region
-    #distance = nd.distance_transform_edt(smfragmask)
-    #grmask = watershed(distance, mask, mask=smfragmask)
-    grmask = watershed(filters.sobel(smfragmask), mask, mask=smfragmask) ##confirmed exactly same as region_grow(smfragmask,poismask,thresh=[0.5,1.5])
-    #grmask = cv2.dilate(grmask, np.ones((2,2),np.uint8), iterations=1) #make sure areas connect
+    grmask = watershed(filters.sobel(smfragmask), mask, mask=smfragmask)
+#    grmask = cv2.dilate(grmask, np.ones((2,2), np.uint8), iterations=1) #make sure areas connect TO DO: TEST
     ## Mask offlimb pixels
     grmask = grmask*limbmask
-    ## Return to 1s and 0s ndi.binary_fill_holes(segmentation - 1)
-    grmask[np.where(grmask < 0.5)] = 0. ##really dont think this is needed in python
+    ## Return to 1s and 0s
+    grmask[np.where(grmask < 0.5)] = 0. # really dont think this is needed in python
     grmask[np.where(grmask >= 0.5)] = 1.
     ## Separate the detections by assigning numbers
-    maskfull, num = nd.label(grmask)#measure.label(grmask, background=0, return_num=True) #found other way connected regions that werent connected in idl
+    maskfull, num = nd.label(grmask)
+#   measure.label(grmask, background=0, return_num=True) #found other way above as this connected regions that werent connected in idl
     ## Order the detections by number of pixels
-    #maskorder = ar_order_mask(maskfull, sz) ##seems to drop a region ## dont think I need to order them for the next part as just goes binary again
-    #maskmap = sunpy.map.Map(maskorder, thismap.meta)
+#    maskorder = ar_order_mask(maskfull, sz) # seems to drop a region, and dont think I need to order them for the next part as just goes binary again
+#    maskmap = sunpy.map.Map(maskorder, thismap.meta)
     maskmap = sunpy.map.Map(maskfull, thismap.meta)
     return maskmap
 
 
 def gauss_smooth(thismap, rsgrad, cmpmm):
-    """Gaussian smooth the magnetogram
+    """
+    Gaussian smooth the magnetogram
     """
     ## Get smoothing Gaussian kernel HWHM
     smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
-    datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None) #to do: make gaussian an option
+    datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None)
     return datasm, smoothhwhm
 
 def ar_pxscale(thismap, cmsqr, mmppx, cmppx):
-    """Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
+    """
+    Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
     """
     ## Area of pixel in Mm^2
     rsunmm = constants.get('radius').value/1e6
@@ -107,13 +105,15 @@ def ar_pxscale(thismap, cmsqr, mmppx, cmppx):
 
 def ar_grow(data, fwhm, gauss, kern):
     """
-    Returns a dilated mask. If a NL mask is provided and GAUSSIAN is set, then the result will be a Shrijver R-mask.
-    Provide RADIUS or FWHM in pixels. FWHM is actually half width at half max!!!
+    Returns a dilated mask.
+    Provide fwhm in pixels.
+    If a NL mask is provided and gauss is TRUE, then the result will be a Shrijver R-mask.
     The convolution stucture will fall off as a gaussian.
     Notes:
-    1. For nice circular kernel binary kernel, width of kernel mask will be 2*radius+1, with a 1px boundary of 0 around the outside.
-    2. Setting radius to 1 will result in a 3x3 structuring element for binary kernels, with a total array size of 5x5
-    # TO DO: MAKE GAUSSIAN BELOW AN OPTION
+    - For nice circular kernel binary kernel, width of kernel mask will be 2*fwhm+1,
+    with a 1px boundary of 0 around the outside.
+    2. Setting radius to 1 will result in a 3x3 structuring element for binary kernels,
+    with a total array size of 5x5
     """
     gsig = fwhm / (np.sqrt(2. * np.log(2.)))
     imgsz=(int(4. * fwhm), int(4. * fwhm))
@@ -133,8 +133,8 @@ def ar_grow(data, fwhm, gauss, kern):
     outkernal = struc
     ## Get Gaussian
     if gauss is True:
-        mu = 0. #mean
-        # max = 1.
+        mu = 0. # mean
+#        max = 1.
         gstruc = gaussian(rcoord, mu, gsig)
         ## Normalize gstruc so that the volume is 1
         gstruc = gstruc/gstruc.sum()
@@ -159,21 +159,28 @@ def ar_grow(data, fwhm, gauss, kern):
 
 def xyrcoord(imgsz):
     """
+    Generate coordinate arrays.
     """
     rows = np.array(range(imgsz[0]))
     columns = np.array(range(imgsz[1]))
-    ycoord,xcoord = np.meshgrid(columns,rows) #should i switch back? so confused!
+    ycoord,xcoord = np.meshgrid(columns, rows) #should i switch back? so confused!
     rcoord = np.sqrt((xcoord - imgsz[0] / 2.)**2. + (ycoord - imgsz[1] / 2.)**2)
     return xcoord, ycoord, rcoord
 
 def gaussian(x, mu, sig):
     """
+    Compute the 1-d Gaussian function.
+    - x: independent variable of Gaussian function.
+    - mu: mean value (center) of Gaussian.
+    - sig: standard deviation (sigma) of Gaussian.
+    Note: maximum value (factor) of Gaussian not included here like in IDL (= 1.)
     """
     return np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
 def ar_order_mask(maskfull, sz):
     """
-    Order the detections by number of pixels
+    Order the detections by number of pixels.
+    NOTE: theres a bug in this with missing the last region. To fix someday if ever actually needed.
     """
     nar = np.max(maskfull)
     arnpix = np.histogram(maskfull, bins=range(nar+1))
