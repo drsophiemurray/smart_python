@@ -9,8 +9,8 @@
     Provides detections of more limited extent after the initial ar_detect
 
     Inputs:
-    - thismap: Processed magnetogram
-    - smartmask: Output mask from ar_detect
+    - inmap: Processed magnetogram
+    - inmask: Output mask from ar_detect
     - cmpmm: Number centimeters in a Mm.
     - smoothphys: Physical gaussian smoothing HWHM in Mm. The radius of a characteristic supergranule
     - smooththresh: Segmentation threshold used in processing magnetograms
@@ -31,7 +31,7 @@ import sunpy.map
 from scipy import ndimage as nd
 
 
-def ar_detect_core(thismap, smartmask):
+def ar_detect_core(inmap, inmask):
     """
     Make detection mask of ARs with mask values ordered
     to a more limited extent that ar_detect
@@ -40,12 +40,12 @@ def ar_detect_core(thismap, smartmask):
     config = ConfigParser()
     config.read("config.ini")
     ## Array size
-    sz = thismap.data.shape
+    sz = inmap.data.shape
     #
     ## Get smoothing gaussian kernal HWHM
-    smoothhwhm = np.float(config.get('detection', 'smoothphys'))*np.float(config.get('constants', 'cmpmm'))/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
+    smoothhwhm = np.float(config.get('detection', 'smoothphys'))*np.float(config.get('constants', 'cmpmm'))/ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=True)
     ## Smooth the data (used for finding the PSL and PSL mask)
-    datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None)
+    datasm = ar_grow(inmap.data, smoothhwhm, gauss=True, kern=None)
     ## Get ridge skeleton
     ridgemask = ar_ridgemask(datasm, thresh=np.float(config.get('detection', 'smooththresh')))
     ## Get PSL map
@@ -57,10 +57,10 @@ def ar_detect_core(thismap, smartmask):
     pslblobmask = ar_grow(psltrace, smoothhwhm, gauss=False, kern=None)
     #
     ## Make strong field masks
-    wstrong = np.where(np.abs(thismap.data) > np.float(config.get('detection', 'strongthresh')))
+    wstrong = np.where(np.abs(inmap.data) > np.float(config.get('detection', 'strongthresh')))
     strongmask = np.zeros(sz)
     strongmask[wstrong]=1.
-    datastrongsm = ar_grow(np.abs(thismap.data*strongmask), smoothhwhm, gauss=True, kern=None)
+    datastrongsm = ar_grow(np.abs(inmap.data*strongmask), smoothhwhm, gauss=True, kern=None)
     ## Determine strong blob pixels
     wstrongblob = np.where(np.abs(datastrongsm) > np.float(config.get('detection', 'smooththresh')))
     strongblobmask = np.zeros(sz)
@@ -80,8 +80,8 @@ def ar_detect_core(thismap, smartmask):
         wthiscore = np.where(arcoremaskid == j)
         thiscoremask = np.zeros(sz)
         thiscoremask[wthiscore] = 1.
-        wpos = np.where((strongblobmask*thiscoremask*thismap.data) > np.float(config.get('detection', 'strongthresh')))
-        wneg = np.where((strongblobmask*thiscoremask*thismap.data) < -np.float(config.get('detection', 'strongthresh')))
+        wpos = np.where((strongblobmask*thiscoremask*inmap.data) > np.float(config.get('detection', 'strongthresh')))
+        wneg = np.where((strongblobmask*thiscoremask*inmap.data) < -np.float(config.get('detection', 'strongthresh')))
         npos = len(wpos[0])
         nneg = len(wneg[0])
         if (npos == 0.) or (nneg == 0.):
@@ -99,15 +99,15 @@ def ar_detect_core(thismap, smartmask):
     arcoremaskmpoleid = measure.label(arcoremaskmpole, background=0)
     ## Make combined core and normal AR detection using region grow
     # Identifies regions that are attached to AR cores
-    smartmask = smartmask >= 1.
+    inmask = inmask >= 1.
     distance = nd.distance_transform_edt(arcoremaskmpole)
-    arcoresmartcomb = watershed(-distance, arcoremaskmpole, mask=smartmask)
+    arcoresmartcomb = watershed(-distance, arcoremaskmpole, mask=inmask)
     ## Create resulting map outputs
-    arcoremap = sunpy.map.Map(arcoremaskmpoleid, thismap.meta)
-    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, thismap.meta)
+    arcoremap = sunpy.map.Map(arcoremaskmpoleid, inmap.meta)
+    pslmaskmap = sunpy.map.Map(strongblobmask*psltrace, inmap.meta)
     ## Optional outputs, that for now have not been included..
-    smartmaskmap = sunpy.map.Map(smartmask*psltrace, thismap.meta) #a SMART mask of 0's and 1's
-    smartconnmap = sunpy.map.Map(arcoresmartcomb*psltrace, thismap.meta) #a SMART mask with only the blobs that are touching cores
+    smartmaskmap = sunpy.map.Map(smartmask*psltrace, inmap.meta) #a SMART mask of 0's and 1's
+    smartconnmap = sunpy.map.Map(arcoresmartcomb*psltrace, inmap.meta) #a SMART mask with only the blobs that are touching cores
     return arcoremap, pslmaskmap
 
 def ar_ridgemask(data, thresh):
