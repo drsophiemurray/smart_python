@@ -1,25 +1,27 @@
-#Routine to make a detection mask (map structure) of ARs with mask values ordered from largest to smallest
-#Assumes input mask has been:
-#	-rotated to solar north up
-#	-magnetic field values cosine corrected
-#	-offlimb pixels zeroed
-#DOPROCESS = set to do the above processing
-#
-#	If running MDI data, it is suggested to read in raw magnetograms and
-#	set /DOPROCESS because the smoothed and unsmoothed masks will use
-# 	different processing due to the MDI noise problem.
-#
-#MAPPROC = Pull out the processed map
-#REBIN4k21k = Do the detections on a magnetogram rebinned to 1kx1k
-#STATUS = output keyword indicating whether detections were found or
-#not
-#		   -1 - The initialised value
-#			0 - Detections were found
-#			1 - No detections found in gaussian mask (aborted)
-#			2 - No detections found and fragment mask had no detections (souldn't occur- in this case status should be 0 if there were detections and 1 if no detections)
-#			3 - Region-grown mask had no detections (aborted; shouldn't occur... might mean error in code)
-#			4 - Final indexed mask had no detections (aborted; shouldn't occur... might mean error in code)
+'''
+    SMART detection code
+    ====================
+    Written by Sophie A. Murray, code originally developed by Paul Higgins (ar_detect.pro).
 
+    Developed under Python 3 and Sunpy 0.8.3
+    - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
+
+    Assumes input map has been (via ar_processmag):
+    - rotated to solar north up
+    - magnetic field values cosine corrected
+    - offlimb pixels zeroed
+
+    Inputs:
+    - thismap: Processed magnetogram
+    - limbmask: Mask with offlimb pixels
+    - cmpmm: Number centimeters in a Mm.
+    - smoothphys: Physical gaussian smoothing HWHM in Mm. The radius of a characteristic supergranule
+    - smooththresh: Segmentation threshold used in processing magnetograms
+    (for 1kx1k gaussian smoothed; determined from plot_hmi_crosscal_resid.pro by comparing HMI and MDI detection masks)
+    - magthresh: Secondary segmentation threshold used to find all flux fragments in an image.
+'''
+
+from configparser import ConfigParser
 import numpy as np
 from sunpy.sun import constants
 import sunpy.map
@@ -30,29 +32,27 @@ from skimage.morphology import watershed
 from skimage import filters
 import cv2
 
-status=-1
-
-#params
-cmpmm =  1e16 #Number centimeters in a mega meter
-smoothphys = 16. #Physical gaussian smoothing HWHM in Mm. The radius of a characteristic supergranule
-smooththresh = 15.0 # a segmentation threshold used in processing magnetograms (for 1kx1k gaussian smoothed; determined from plot_hmi_crosscal_resid.pro by comparing HMI and MDI detection masks)
-magthresh =  350.0 #a secondary segmentation threshold (for MDI) used to find all flux fragments in an image
-
 
 def ar_detect(thismap, limbmask):
+    """Make detection mask of ARs with mask values ordered.
     """
-    """
-    sz = thismap.data.shape
+    ## Load configuration file
+    config = ConfigParser()
+    config.read("config.ini")
     ## Initialise blank mask map
+    sz = thismap.data.shape
     mask = np.zeros(sz)
     ## Gaussian smoothing
-    datasm, smoothhwhm = gauss_smooth(thismap, smoothphys, cmpmm) #TO DO: same thing as ar_grow(thismap.data,smoothhwhm,gauss=True,kern=None)
+    # TO DO: same thing as ar_grow(thismap.data,smoothhwhm,gauss=True,kern=None)
+    datasm, smoothhwhm = gauss_smooth(thismap,
+                                      np.float(config.get('detection', 'smoothphys')),
+                                      np.float(config.get('constants', 'cmpmm')))
     ## Make a mask of detections
-    wmask = np.where(np.abs(datasm) > smooththresh)
+    wmask = np.where(np.abs(datasm) > np.float(config.get('detection', 'smooththresh')))
     mask[wmask] = 1.
     ## Segment the non-smoothed magnetogram to grab near by fragments and connect adjacent blobs
     fragmask = np.zeros(sz)
-    wfrag = np.where(np.abs(thismap.data) >  magthresh)
+    wfrag = np.where(np.abs(thismap.data) >  np.float(config.get('detection', 'magthresh')))
     fragmask[wfrag] = 1.
     smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False, kern=None)
     ## Region grow the smooth detections
