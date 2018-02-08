@@ -6,6 +6,11 @@
     Developed under Python 3 and Sunpy 0.8.3
     - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
 
+    Inputs:
+    - thismap: processed magnetogram
+    - cosmicthresh: a hard threshold for detecting cosmic rays
+    - medfiltwidth: the width of a box to use to perform median filter on magnetogram
+
     Optional keywords:
     - medianfilter: if TRUE, 3x3 median filter noisy values (default FALSE in original code)
 
