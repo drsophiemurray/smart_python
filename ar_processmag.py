@@ -30,7 +30,7 @@
 import numpy as np
 import scipy
 from scipy import interpolate
-import sunpy.wcs.wcs as wcs
+#import sunpy.wcs.wcs as wcs
 from configparser import ConfigParser
 import sunpy.map
 import astropy.units as u
@@ -143,10 +143,15 @@ def ar_cosmap(inmap):
     fudge=0.999
     #
     ## Get helioprojective_coordinates
-    xx, yy = wcs.convert_pixel_to_data(inmap.data.shape,
-                                       [inmap.meta["CDELT1"], inmap.meta["CDELT2"]],
-                                       [inmap.meta["CRPIX1"], inmap.meta["CRPIX2"]],
-                                       [inmap.meta["CRVAL1"], inmap.meta["CRVAL2"]])
+    # Below is deprecated so commented out and updated
+#    xx, yy = wcs.convert_pixel_to_data(inmap.data.shape,
+#                                       [inmap.meta["CDELT1"], inmap.meta["CDELT2"]],
+#                                       [inmap.meta["CRPIX1"], inmap.meta["CRPIX2"]],
+#                                       [inmap.meta["CRVAL1"], inmap.meta["CRVAL2"]])
+    x, y = (np.meshgrid(*[np.arange(v.value) for v in inmap.dimensions]) * u.pixel)
+    hpc = inmap.pixel_to_world(x, y)#NEED TO CHECK RE WHAT ORIGIN TO USE, origin=1)
+    xx = hpc.Tx.value
+    yy = hpc.Ty.value
     rr = ((xx**2.) + (yy**2.))**(0.5)
     #
     coscor = np.copy(rr)
