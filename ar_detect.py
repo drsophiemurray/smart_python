@@ -12,7 +12,7 @@
     - offlimb pixels zeroed
 
     Inputs:
-    - thismap: Processed magnetogram
+    - inmap: Processed magnetogram
     - limbmask: Mask with offlimb pixels
     - cmpmm: Number centimeters in a Mm.
     - smoothphys: Physical gaussian smoothing HWHM in Mm. The radius of a characteristic supergranule
@@ -33,7 +33,7 @@ from skimage import filters
 import cv2
 
 
-def ar_detect(thismap, limbmask):
+def ar_detect(inmap, limbmask):
     """
     Make detection mask of ARs with mask values ordered.
     """
@@ -41,11 +41,11 @@ def ar_detect(thismap, limbmask):
     config = ConfigParser()
     config.read("config.ini")
     ## Initialise blank mask map
-    sz = thismap.data.shape
+    sz = inmap.data.shape
     mask = np.zeros(sz)
     ## Gaussian smoothing
-    # TO DO: same thing as ar_grow(thismap.data,smoothhwhm,gauss=True,kern=None)
-    datasm, smoothhwhm = gauss_smooth(thismap,
+    # TO DO: same thing as ar_grow(inmap.data,smoothhwhm,gauss=True,kern=None)
+    datasm, smoothhwhm = gauss_smooth(inmap,
                                       np.float(config.get('detection', 'smoothphys')),
                                       np.float(config.get('constants', 'cmpmm')))
     ## Make a mask of detections
@@ -53,7 +53,7 @@ def ar_detect(thismap, limbmask):
     mask[wmask] = 1.
     ## Segment the non-smoothed magnetogram to grab near by fragments and connect adjacent blobs
     fragmask = np.zeros(sz)
-    wfrag = np.where(np.abs(thismap.data) > np.float(config.get('detection', 'magthresh')))
+    wfrag = np.where(np.abs(inmap.data) > np.float(config.get('detection', 'magthresh')))
     fragmask[wfrag] = 1.
     smfragmask = ar_grow(fragmask, smoothhwhm/2., gauss=False, kern=None)
     ## Region grow the smooth detections
@@ -70,31 +70,31 @@ def ar_detect(thismap, limbmask):
 #   measure.label(grmask, background=0, return_num=True) #found other way above as this connected regions that werent connected in idl
     ## Order the detections by number of pixels
 #    maskorder = ar_order_mask(maskfull, sz) # seems to drop a region, and dont think I need to order them for the next part as just goes binary again
-#    maskmap = sunpy.map.Map(maskorder, thismap.meta)
-    maskmap = sunpy.map.Map(maskfull, thismap.meta)
+#    maskmap = sunpy.map.Map(maskorder, inmap.meta)
+    maskmap = sunpy.map.Map(maskfull, inmap.meta)
     return maskmap
 
-def gauss_smooth(thismap, rsgrad, cmpmm):
+def gauss_smooth(inmap, rsgrad, cmpmm):
     """
     Gaussian smooth the magnetogram
     """
     ## Get smoothing Gaussian kernel HWHM
-    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(thismap, cmsqr=False, mmppx=False, cmppx=True)
-    datasm = ar_grow(thismap.data, smoothhwhm, gauss=True, kern=None)
+    smoothhwhm = (rsgrad*cmpmm)/ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=True)
+    datasm = ar_grow(inmap.data, smoothhwhm, gauss=True, kern=None)
     return datasm, smoothhwhm
 
-def ar_pxscale(thismap, cmsqr, mmppx, cmppx):
+def ar_pxscale(inmap, cmsqr, mmppx, cmppx):
     """
     Calculate the area of an magnetogram pixel at disk-centre on the solar surface.
     """
     ## Area of pixel in Mm^2
     rsunmm = constants.get('radius').value/1e6
-    mmperarcsec = rsunmm/thismap.meta["RSUN_OBS"] # Mm/arcsec
-    pixarea = ((thismap.meta["CDELT1"] * mmperarcsec) * (thismap.meta["CDELT2"] * mmperarcsec)) # Mm^2
+    mmperarcsec = rsunmm/inmap.meta["RSUN_OBS"] # Mm/arcsec
+    pixarea = ((inmap.meta["CDELT1"] * mmperarcsec) * (inmap.meta["CDELT2"] * mmperarcsec)) # Mm^2
     if cmsqr is True:
         pixarea = pixarea*1e16
     ## Length of a side of a pixel
-    retmmppx = (thismap.meta["CDELT1"]/thismap.meta["RSUN_OBS"])*rsunmm # Mm/px
+    retmmppx = (inmap.meta["CDELT1"]/inmap.meta["RSUN_OBS"])*rsunmm # Mm/px
     if cmppx is True:
         return retmmppx*1e16
     elif mmppx is True:
