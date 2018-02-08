@@ -34,11 +34,12 @@ import matplotlib.pylab as plt
 
 if __name__ == "__main__":
     ## First load the data
-#    map = ar_readmag()
+#    thismap, data_dir = ar_readmag()
     # Currently manually loading for testing purposes, rather than using automatic scraping code above.
-    thismap = sunpy.map.Map('/Users/sophie/data/smart/latest.fits')
-    #thismap = sunpy.map.Map('/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits')
-    #thismap = sunpy.map.Map('/Users/sophie/Downloads/hmi.M_720s.20140921_120000_TAI.fits')
+    data_dir = '/Users/sophie/data/smart/'
+    thismap = sunpy.map.Map(data_dir + 'latest.fits')
+#    thismap = sunpy.map.Map('/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits')
+#    thismap = sunpy.map.Map('/Users/sophie/Downloads/hmi.M_720s.20140921_120000_TAI.fits')
 
     ## Need to downsample if 4096x4096 (generally shouldnt be if using near-real-time JSOC data
     if thismap.meta['naxis1'] == 4096:
@@ -54,18 +55,18 @@ if __name__ == "__main__":
     thisar, pslmap = ar_detect_core(magproc, thissm.data)
 #    thismask = thisar.data
 
-    ## Visualise
-    plt.ion()
-    thismap.peek(vmin=-500, vmax=500)
-    plt.contour(thisar.data, origin='lower')
-    plt.contour(pslmap.data, origin='lower')
-    #plt.close()
-
     ## Get properties
     posprop = ar_posprop(magproc, thisar.data, cosmap)
     magprop = ar_magprop(magproc, thisar.data, cosmap)
     pslprop = ar_pslprop(magproc, thisar.data, doproj=False, projmaxscale=1024)
 
+    ## Visualise
+    thismap.plot(vmin=-500, vmax=500)
+    plt.colorbar(label='B [G]')
+    plt.contour(thisar.data, origin='lower')
+    plt.contour(pslmap.data, origin='lower')
+#    thismap.draw_grid(grid_spacing=10 * u.deg)
+    plt.savefig(data_dir + 'smart_detections.png')
 
 
 # ======================================
