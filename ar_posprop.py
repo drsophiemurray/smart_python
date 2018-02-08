@@ -10,7 +10,7 @@
 
     Inputs:
     - inmap: Processed magnetogram
-    - thismask: Output SMART mask from ar_detect_core
+    - inmask: Output SMART mask from ar_detect_core
 
 '''
 
@@ -21,13 +21,13 @@ from astropy.coordinates import SkyCoord
 from sunpy.coordinates import frames
 import pandas as pd
 
-def ar_posprop(inmap, thismask, cosmap):
+def ar_posprop(inmap, inmask, cosmap):
     """
     Determine the AR positions, given mask indices.
     """
 #    pxmmsq = ar_pxscale(inmap, cmsqr=False, mmppx=False, cmppx=False)
 #    pxcmsq = ar_pxscale(inmap, cmsqr=True, mmppx=False, cmppx=False)
-    nmask = np.max(thismask)
+    nmask = np.max(inmask)
     ## Create dataframes to output (total, positive, negative)
     ardf = pd.DataFrame(columns = ['arid',
                                    'xminbnd', 'yminbnd', 'xmaxbnd', 'ymaxbnd', 'xcenbnd', 'ycenbnd',
@@ -40,19 +40,19 @@ def ar_posprop(inmap, thismask, cosmap):
     ## For each AR get position information
     for i in range(1, np.int(nmask)+1):
         ## Zero pixels outside detection boundary
-#        tmpmask = np.copy(thismask)
-#        tmpmask[np.where(thismask != i)] = 0.
+#        tmpmask = np.copy(inmask)
+#        tmpmask[np.where(inmask != i)] = 0.
         tmpdat = np.copy(inmap.data)
-        tmpdat[np.where(thismask != i)] = 0.
+        tmpdat[np.where(inmask != i)] = 0.
         tmpabs = np.abs(tmpdat)
         tmpflx = tmpabs*cosmap
         ## Where are values within the detection boundary
-#        tmpmask[np.where(thismask == i)] = 1.
+#        tmpmask[np.where(inmask == i)] = 1.
         ## Where are the signed values
 #        wneg = np.where(tmpdat < 0.)
 #        wpos = np.where(tmpdat > 0.)
         # Fill the position structure for whole detection
-        arstr = ar_posprop_findpos(i, inmap, np.where(thismask == i), tmpflx)
+        arstr = ar_posprop_findpos(i, inmap, np.where(inmask == i), tmpflx)
         # Same for positive and negative regions
         posstr = ar_posprop_findpos(i, inmap, np.where(tmpdat > 0), tmpflx)
         negstr = ar_posprop_findpos(i, inmap, np.where(tmpdat < 0), tmpflx)
