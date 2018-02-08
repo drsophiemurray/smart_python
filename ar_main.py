@@ -52,19 +52,19 @@ if __name__ == "__main__":
     ## Create AR masks
     thissm = ar_detect(magproc, limbmask)
     thisar, pslmap = ar_detect_core(magproc, thissm.data)
-    thismask = thisar.data
+#    thismask = thisar.data
 
     ## Visualise
     plt.ion()
-    magproc.peek(vmin=-500, vmax=500)
-    plt.contour(thismask, origin='lower')
+    thismap.peek(vmin=-500, vmax=500)
+    plt.contour(thisar.data, origin='lower')
     plt.contour(pslmap.data, origin='lower')
     #plt.close()
 
     ## Get properties
-    posprop = ar_posprop(magproc, thismask, cosmap)
-    magprop = ar_magprop(magproc, thismask, cosmap)
-    pslprop = ar_pslprop(magproc, thismask, doproj=False, projmaxscale=1024)
+    posprop = ar_posprop(magproc, thisar.data, cosmap)
+    magprop = ar_magprop(magproc, thisar.data, cosmap)
+    pslprop = ar_pslprop(magproc, thisar.data, doproj=False, projmaxscale=1024)
 
 
 
