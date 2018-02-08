@@ -7,7 +7,7 @@
     - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
 
     Inputs:
-    - thismap: processed magnetogram
+    - inmap: processed magnetogram
     - cosmicthresh: a hard threshold for detecting cosmic rays
     - medfiltwidth: the width of a box to use to perform median filter on magnetogram
 
@@ -35,7 +35,7 @@ from configparser import ConfigParser
 import sunpy.map
 import astropy.units as u
 
-def ar_processmag(thismap, medianfilter):
+def ar_processmag(inmap, medianfilter):
     """Load input paramters, remove cosmic rays and NaNs,
     then make all off-limb pixels zero, and clean up limb,
     rotate map and do a cosine correction.
@@ -44,20 +44,20 @@ def ar_processmag(thismap, medianfilter):
     config = ConfigParser()
     config.read("config.ini")
     ## Rotate
-#    thismap = thismap.rotate(angle=int(thismap.meta['crota2'])*u.deg)
-#    thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
-#    thismap.meta['crota2'] = 0.
+#    inmap = inmap.rotate(angle=int(inmap.meta['crota2'])*u.deg)
+#    inmap = inmap.resample(u.Quantity([1024, 1024], u.pixel))
+#    inmap.meta['crota2'] = 0.
     # I commented out above as it was just adding way too much limb noise, so instead doing a hacky way
-    if (thismap.meta['crota2'] >= 100.):
-        data = np.flip(thismap.data, 1)[::-1]
-        thismap = sunpy.map.Map(data, thismap.meta)
-        thismap.meta['crota2'] = 0.
+    if (inmap.meta['crota2'] >= 100.):
+        data = np.flip(inmap.data, 1)[::-1]
+        inmap = sunpy.map.Map(data, inmap.meta)
+        inmap.meta['crota2'] = 0.
     # Already floats in numpy data array so skipped first line converting double to float
-    imgsz = len(thismap.data) #not 1024 x 1024 like idl
+    imgsz = len(inmap.data) #not 1024 x 1024 like idl
     # Didnt load parameters - need to add to config file
     # Didnt bother with indextag
     ## Cosmic ray removal
-    data = cosmicthresh_remove(thismap.data, np.float(config.get('processing', 'cosmicthresh')))
+    data = cosmicthresh_remove(inmap.data, np.float(config.get('processing', 'cosmicthresh')))
     ## Clean NaNs
     # Higgo used bilinear interpoaltion
     data = remove_nans(data)
@@ -65,19 +65,19 @@ def ar_processmag(thismap, medianfilter):
     # Clean edge - make all pixels off limb equal to 0. TO DO - can be commented out as done during nan removal above!
     data = edge_remove(data)
     ## Create cosine map
-    thismap = sunpy.map.Map(data, thismap.meta)
-    cosmap, rrdeg, limbmask = ar_cosmap(thismap)
+    inmap = sunpy.map.Map(data, inmap.meta)
+    cosmap, rrdeg, limbmask = ar_cosmap(inmap)
     ## Fix remaining limb issues
-    data, limbmask = fix_limb(thismap.data, rrdeg, limbmask)
+    data, limbmask = fix_limb(inmap.data, rrdeg, limbmask)
     ## Median filter noisy values
     # TO DO: do it properly like Higgo - check sunpy stuff - also commented as not used in main program
     if medianfilter is True:
         data = median_filter(data, np.float(config.get('processing', 'medfiltwidth')))
-    thismap = sunpy.map.Map(data, thismap.meta)
+    inmap = sunpy.map.Map(data, inmap.meta)
     ## Magnetic field cosine correction
-    thismap = sunpy.map.Map(data, thismap.meta)
-    data, cosmap = cosine_correction(thismap, cosmap)
-    return thismap, cosmap, limbmask
+    inmap = sunpy.map.Map(data, inmap.meta)
+    data, cosmap = cosine_correction(inmap, cosmap)
+    return inmap, cosmap, limbmask
 
 def cosmicthresh_remove(data, cosmicthresh):
     """
@@ -130,7 +130,7 @@ def edge_remove(data):
     data[wblankpx] = 0.
     return data
 
-def ar_cosmap(thismap):
+def ar_cosmap(inmap):
     """
     Get the cosine map and off-limb pixel map using WCS.
     Generate a map of the solar disk that is 1 at disk center and goes radially outward as the cos(angle to LOS), which
@@ -143,22 +143,22 @@ def ar_cosmap(thismap):
     fudge=0.999
     #
     ## Get helioprojective_coordinates
-    xx, yy = wcs.convert_pixel_to_data(thismap.data.shape,
-                                       [thismap.meta["CDELT1"], thismap.meta["CDELT2"]],
-                                       [thismap.meta["CRPIX1"], thismap.meta["CRPIX2"]],
-                                       [thismap.meta["CRVAL1"], thismap.meta["CRVAL2"]])
+    xx, yy = wcs.convert_pixel_to_data(inmap.data.shape,
+                                       [inmap.meta["CDELT1"], inmap.meta["CDELT2"]],
+                                       [inmap.meta["CRPIX1"], inmap.meta["CRPIX2"]],
+                                       [inmap.meta["CRVAL1"], inmap.meta["CRVAL2"]])
     rr = ((xx**2.) + (yy**2.))**(0.5)
     #
     coscor = np.copy(rr)
-    rrdeg = np.arcsin(coscor / thismap.meta["RSUN_OBS"])
+    rrdeg = np.arcsin(coscor / inmap.meta["RSUN_OBS"])
     coscor = 1. / np.cos(rrdeg)
-    wgt = np.where(rr > (thismap.meta["RSUN_OBS"]*fudge))
+    wgt = np.where(rr > (inmap.meta["RSUN_OBS"]*fudge))
     coscor[wgt] = 1.
     #
     offlimb = np.copy(rr)
-    wgtrr = np.where(rr >= (thismap.meta["RSUN_OBS"]*fudge))
+    wgtrr = np.where(rr >= (inmap.meta["RSUN_OBS"]*fudge))
     offlimb[wgtrr] = 0.
-    wltrr = np.where(rr < (thismap.meta["RSUN_OBS"]*fudge))
+    wltrr = np.where(rr < (inmap.meta["RSUN_OBS"]*fudge))
     offlimb[wltrr] = 1.
     #
     return coscor, rrdeg, offlimb
@@ -181,17 +181,17 @@ def median_filter(data, medfiltwidth):
     """
     return scipy.ndimage.gaussian_filter(data, medfiltwidth)
 
-def cosine_correction(thismap, cosmap):
+def cosine_correction(inmap, cosmap):
     """
     Do magnetic field cosine correction.
     Limit correction to having 1 pixel at edge of the Sun. This is the maximum factor of pixel area
     covered by a single pixel at the solar limb as compared with at disk centre.
     """
-    thetalim = np.arcsin(1. - thismap.meta["CDELT1"] / thismap.meta["RSUN_OBS"])
+    thetalim = np.arcsin(1. - inmap.meta["CDELT1"] / inmap.meta["RSUN_OBS"])
     coscorlim = 1. / np.cos(thetalim)
     cosmaplim = np.where((cosmap) > coscorlim)
     cosmap[cosmaplim] = coscorlim
-    return thismap.data*cosmap, cosmap
+    return inmap.data*cosmap, cosmap
 
 def myround(x, base=5):
     """
