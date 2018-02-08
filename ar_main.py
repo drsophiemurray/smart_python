@@ -17,6 +17,7 @@
     - sunpy.wcs has been deprecated and needs to be replaced in ar_processmag.py
     - there has to be a better way for median filtering a.l.a filer_image.pro
     - need to finish deprojection code
+    - need to fix the PSLs that still show up when they shouldnt anymore
 '''
 
 
@@ -38,8 +39,9 @@ if __name__ == "__main__":
     # Currently manually loading for testing purposes, rather than using automatic scraping code above.
     data_dir = '/Users/sophie/data/smart/'
     thismap = sunpy.map.Map(data_dir + 'latest.fits')
-#    thismap = sunpy.map.Map('/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits')
-#    thismap = sunpy.map.Map('/Users/sophie/Downloads/hmi.M_720s.20140921_120000_TAI.fits')
+    #'/Users/sophie/data/smart/latest.fits'
+    #'/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits'
+    #'/Users/sophie/Downloads/hmi.M_720s.20140921_120000_TAI.fits'
 
     ## Need to downsample if 4096x4096 (generally shouldnt be if using near-real-time JSOC data
     if thismap.meta['naxis1'] == 4096:
@@ -61,7 +63,8 @@ if __name__ == "__main__":
     pslprop = ar_pslprop(magproc, thisar.data, doproj=False, projmaxscale=1024)
 
     ## Visualise
-    thismap.plot(vmin=-500, vmax=500)
+    magproc.plot(vmin=-500, vmax=500)
+    magproc.draw_limb()
     plt.colorbar(label='B [G]')
     plt.contour(thisar.data, origin='lower')
     plt.contour(pslmap.data, origin='lower')
