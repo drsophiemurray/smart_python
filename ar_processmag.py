@@ -24,7 +24,7 @@
 
     Notes:
     - sunpy.wcs has been deprecated and needs to be replaced
-    - there has to be a better way for median filtering a.l.a filer_image.pro
+    - there has to be a better way for median filtering a.l.a filter_image.pro
 '''
 
 import numpy as np
@@ -34,6 +34,7 @@ from scipy import interpolate
 from configparser import ConfigParser
 import sunpy.map
 import astropy.units as u
+from astropy.convolution import convolve
 
 def ar_processmag(inmap, medianfilter):
     """Load input paramters, remove cosmic rays and NaNs,
@@ -53,27 +54,23 @@ def ar_processmag(inmap, medianfilter):
         inmap = sunpy.map.Map(data, inmap.meta)
         inmap.meta['crota2'] = 0.
     # Already floats in numpy data array so skipped first line converting double to float
-    imgsz = len(inmap.data) #not 1024 x 1024 like idl
-    # Didnt load parameters - need to add to config file
-    # Didnt bother with indextag
     ## Cosmic ray removal
     data = cosmicthresh_remove(inmap.data, np.float(config.get('processing', 'cosmicthresh')))
     ## Clean NaNs
     # Higgo used bilinear interpoaltion
     data = remove_nans(data)
     ## Zero off-limb pixels
-    # Clean edge - make all pixels off limb equal to 0. TO DO - can be commented out as done during nan removal above!
-    data = edge_remove(data)
+    # Clean edge - make all pixels off limb equal to 0. Has been commented out as done during nan removal above!
+#    data = edge_remove(data)
     ## Create cosine map
     inmap = sunpy.map.Map(data, inmap.meta)
     cosmap, rrdeg, limbmask = ar_cosmap(inmap)
     ## Fix remaining limb issues
     data, limbmask = fix_limb(inmap.data, rrdeg, limbmask)
     ## Median filter noisy values
-    # TO DO: do it properly like Higgo - check sunpy stuff - also commented as not used in main program
+    # Higgo uses an IDL rotine called filter_image so need to get python version (not urgent as not used default)
     if medianfilter is True:
         data = median_filter(data, np.float(config.get('processing', 'medfiltwidth')))
-    inmap = sunpy.map.Map(data, inmap.meta)
     ## Magnetic field cosine correction
     inmap = sunpy.map.Map(data, inmap.meta)
     data, cosmap = cosine_correction(inmap, cosmap)
@@ -104,7 +101,7 @@ def cosmicthresh_remove(data, cosmicthresh):
 def remove_nans(array):
     """
     Clean NaNs.
-    Includes zero-value as 'missing'.
+    Includes zero-values off-limb as 'missing'.
     """
     x = np.arange(0, array.shape[1])
     y = np.arange(0, array.shape[0])
@@ -184,7 +181,9 @@ def median_filter(data, medfiltwidth):
     Median filter noisy values. See here for inspiration:
     http://docs.sunpy.org/en/stable/generated/gallery/image_bright_regions_gallery_example.html
     """
-    return scipy.ndimage.gaussian_filter(data, medfiltwidth)
+    kernel = np.ones((np.int(medfiltwidth), np.int(medfiltwidth))) #medfiltwidth should be three
+    return convolve(data, kernel)
+#    return scipy.ndimage.gaussian_filter(data, medfiltwidth)
 
 def cosine_correction(inmap, cosmap):
     """
