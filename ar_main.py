@@ -31,10 +31,11 @@ from ar_pslprop import ar_pslprop
 import astropy.units as u
 import sunpy.map
 import matplotlib.pylab as plt
+import pandas as pd
 
 
 if __name__ == "__main__":
-    ## First load the data
+    ## First load the latest HMI data file
 #    thismap, data_dir = ar_readmag()
     # Currently manually loading for testing purposes, rather than using automatic scraping code above.
     data_dir = '/Users/sophie/data/smart/'
@@ -62,12 +63,23 @@ if __name__ == "__main__":
     magprop = ar_magprop(magproc, thisar.data, cosmap)
     pslprop = ar_pslprop(magproc, thisar.data, doproj=False, projmaxscale=1024)
 
+    ## Output to json
+#    out = {'meta': {'some': 'meta info'}}
+#    out['posprop'] = posprop
+#    out['magprop'] = magprop
+#    out['pslprop'] = pslprop
+    print(pd.io.json.dumps(out))
+
     ## Visualise
     magproc.plot(vmin=-500, vmax=500)
     magproc.draw_limb()
     plt.colorbar(label='B [G]')
-    plt.contour(thisar.data>0., origin='lower')
-    plt.contour(pslmap.data>0., origin='lower')
+    plt.contour(pslmap.data, origin='lower',
+                colors='yellow', linewidths=0.1,
+                vmin=0., vmax=np.max(np.unique(thisar.data))+1)
+    plt.contour(thisar.data>0., origin='lower',
+                colors='blue', linewidths=1.0,
+                vmin=0., vmax=np.max(np.unique(thisar.data))+1)
 #    thismap.draw_grid(grid_spacing=10 * u.deg)
     plt.savefig(data_dir + 'smart_detections.png')
 
