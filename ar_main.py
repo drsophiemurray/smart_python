@@ -66,8 +66,8 @@ if __name__ == "__main__":
     magproc.plot(vmin=-500, vmax=500)
     magproc.draw_limb()
     plt.colorbar(label='B [G]')
-    plt.contour(thisar.data, origin='lower')
-    plt.contour(pslmap.data, origin='lower')
+    plt.contour(thisar.data>0., origin='lower')
+    plt.contour(pslmap.data>0., origin='lower')
 #    thismap.draw_grid(grid_spacing=10 * u.deg)
     plt.savefig(data_dir + 'smart_detections.png')
 
