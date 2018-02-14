@@ -33,6 +33,7 @@ import datetime
 import numpy as np
 import json
 import time
+from ar_readmag import grid_overlay
 
 if __name__ == "__main__":
     # First load the latest HMI data file
@@ -40,7 +41,7 @@ if __name__ == "__main__":
 #    thismap, data_dir = ar_readmag()
     # Currently manually loading for testing purposes, rather than using automatic scraping code above.
     print('Loading fits file')
-    data_dir = '/Users/sophie/Dropbox/'#'/Users/sophie/data/smart/'
+    data_dir = '/Users/sophie/data/smart/' #'/Users/sophie/Dropbox/'
     thismap = sunpy.map.Map(data_dir + 'latest.fits')
 
     # Need to downsample if 4096x4096
@@ -88,12 +89,18 @@ if __name__ == "__main__":
         obj = json.load(infile)
     with open(data_dir+smartdate+'_properties.json', 'w') as outfile:
         json.dump(obj, outfile,
-                  sort_keys=True,
+#                  sort_keys=True,
                   indent=4, separators=(',', ': '))
 
     # Visualise
-    thismap.plot(vmin=-500, vmax=500)
-    thismap.draw_limb()
+    figure = plt.figure()
+    from sunpy.visualization import wcsaxes_compat
+    #axes = plt.subplot(projection=thismap)
+    axes = wcsaxes_compat.gca_wcs(thismap.wcs)# figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
+    image = thismap.plot(vmin=-500, vmax=500, axes=axes)
+    axes.coords.grid(False)
+    # Draw solar lat/lon grid
+    overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
     plt.colorbar(label='B [G]')
     plt.contour(pslmap.data, origin='lower',
                 colors='yellow', linewidths=0.5,
@@ -101,11 +108,11 @@ if __name__ == "__main__":
     plt.contour(thisar.data>0., origin='lower',
                 colors='blue', linewidths=1.0,
                 vmin=0., vmax=np.max(np.unique(thisar.data))+1)
-#    thismap.draw_grid(grid_spacing=10 * u.deg)
     plt.savefig(data_dir+smartdate+'_detections.eps')
 
     # How long did that take?
     print('Runtime:', round(time.time() - start_time),'seconds')
+
 
 # ======================================
 # Some IDL fits files used for testing:
