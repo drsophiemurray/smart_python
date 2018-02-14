@@ -27,11 +27,6 @@ import os
 import urllib.request
 from configparser import ConfigParser
 import sunpy.map
-import astropy.units as u
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-import matplotlib.colors as colors
-
 
 def ar_readmag():
     """Grab latest fits file time from JSOC.
