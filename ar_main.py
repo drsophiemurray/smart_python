@@ -34,6 +34,7 @@ import numpy as np
 import json
 import time
 from ar_readmag import grid_overlay
+from sunpy.visualization import wcsaxes_compat
 
 if __name__ == "__main__":
     # First load the latest HMI data file
@@ -94,14 +95,14 @@ if __name__ == "__main__":
 
     # Visualise
     figure = plt.figure()
-    from sunpy.visualization import wcsaxes_compat
-    #axes = plt.subplot(projection=thismap)
-    axes = wcsaxes_compat.gca_wcs(thismap.wcs)# figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
+    axes = wcsaxes_compat.gca_wcs(thismap.wcs)
+    ## Alternatively, axes=plt.subplot(projection=thismap) or figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
     image = thismap.plot(vmin=-500, vmax=500, axes=axes)
     axes.coords.grid(False)
     # Draw solar lat/lon grid
     overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
     plt.colorbar(label='B [G]')
+    # Overlay PILs and SMART detections
     plt.contour(pslmap.data, origin='lower',
                 colors='yellow', linewidths=0.5,
                 vmin=0., vmax=np.max(np.unique(thisar.data))+1)
