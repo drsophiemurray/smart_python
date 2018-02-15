@@ -98,7 +98,7 @@ if __name__ == "__main__":
                   indent=4, separators=(',', ': '))
 
     # Visualise
-    # Just something simple for my testing - to be replaced by propert SolarMonitor stuff eventually...
+    ## Just something simple for my testing - to be replaced by propert SolarMonitor stuff eventually...
     figure = plt.figure()
     axes = wcsaxes_compat.gca_wcs(thismap.wcs)
     ## Alternatively, axes=plt.subplot(projection=thismap) or figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
