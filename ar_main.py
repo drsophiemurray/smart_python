@@ -33,7 +33,7 @@ import datetime
 import numpy as np
 import json
 import time
-from ar_readmag import grid_overlay
+from ar_plot import grid_overlay
 from sunpy.visualization import wcsaxes_compat
 
 if __name__ == "__main__":
