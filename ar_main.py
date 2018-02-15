@@ -13,8 +13,12 @@
     - Track regions from previous six hours
     - Visualise output for SolarMonitor.org
 
-    Notes:
-    - need to finish deprojection code in ar_pslprop.py
+    TODO:
+    - Finish de-projection code in ar_pslprop.py
+    - Get rid of 'ar_' naming scheme
+    - Put stuff in sub codes under main and not their own function a.l.a Higgo
+    - Fix numbers in json files (all those unnecessary significant figures...)
+    - Make better way to plot lat/lon grid rather than hacky version
 '''
 
 
@@ -94,6 +98,7 @@ if __name__ == "__main__":
                   indent=4, separators=(',', ': '))
 
     # Visualise
+    # Just something simple for my testing - to be replaced by propert SolarMonitor stuff eventually...
     figure = plt.figure()
     axes = wcsaxes_compat.gca_wcs(thismap.wcs)
     ## Alternatively, axes=plt.subplot(projection=thismap) or figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
