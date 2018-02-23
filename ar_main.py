@@ -43,11 +43,11 @@ from sunpy.visualization import wcsaxes_compat
 if __name__ == "__main__":
     # First load the latest HMI data file
     start_time = time.time()
-#    thismap, data_dir = ar_readmag()
+    thismap, data_dir = ar_readmag()
     # Currently manually loading for testing purposes, rather than using automatic scraping code above.
-    print('Loading fits file')
-    data_dir = '/Users/sophie/data/smart/' #'/Users/sophie/Dropbox/'
-    thismap = sunpy.map.Map(data_dir + 'latest.fits')
+#    print('Loading fits file')
+#    data_dir = '/Users/sophie/data/smart/' #'/Users/sophie/Dropbox/'
+#    thismap = sunpy.map.Map(data_dir + 'test.fits')
 
     # Need to downsample if 4096x4096
     # (generally shouldnt be if using near-real-time JSOC data)
@@ -58,9 +58,9 @@ if __name__ == "__main__":
 
     # Rotate map if necessary
     if (thismap.meta['crota2'] >= 100.):
-        data = np.flip(inmap.data, 1)[::-1]
-        inmap = sunpy.map.Map(data, inmap.meta)
-        inmap.meta['crota2'] = 0.
+        data = np.flip(thismap.data, 1)[::-1]
+        thismap = sunpy.map.Map(data, thismap.meta)
+        thismap.meta['crota2'] = 0.
 
     # Now process magnetogram
     print('Processing data')
