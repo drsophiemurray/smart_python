@@ -53,18 +53,18 @@ if __name__ == "__main__":
 #    data_dir = '/Users/sophie/data/smart/' #'/Users/sophie/Dropbox/'
 #     thismap = sunpy.map.Map(data_dir + 'test.fits')
 
-    # Need to downsample if 4096x4096
-    # (generally shouldnt be if using near-real-time JSOC data)
-        if thismap.meta['naxis1'] == 4096:
-            thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
-            thismap.meta['naxis1'] = 1024
-            thismap.meta['naxis2'] = 1024
-
     # Rotate map if necessary
         if (thismap.meta['crota2'] >= 100.):
             data = np.flip(thismap.data, 1)[::-1]
             thismap = sunpy.map.Map(data, thismap.meta)
             thismap.meta['crota2'] = 0.
+
+            # Need to downsample if 4096x4096
+    # (generally shouldnt be if using near-real-time JSOC data)
+        if thismap.meta['naxis1'] == 4096:
+            thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
+            thismap.meta['naxis1'] = 1024
+            thismap.meta['naxis2'] = 1024
 
     # Now process magnetogram
         print('Processing data')
@@ -85,8 +85,8 @@ if __name__ == "__main__":
     # Output to json
         smartdate = thismap.date.strftime('%Y%m%d_%H%M')
         out = {'meta': {'dateobs': smartdate,
-                    'dimension': thismap.dimensions[0].value,
-                    'instrument': thismap.instrument}}
+                        'dimension': thismap.dimensions[0].value,
+                        'instrument': thismap.instrument}}
         out['posprop'] = posprop
         out['magprop'] = magprop
         out['pslprop'] = pslprop
@@ -106,22 +106,24 @@ if __name__ == "__main__":
         figure = plt.figure()
         axes = wcsaxes_compat.gca_wcs(thismap.wcs)
     ## Alternatively, axes=plt.subplot(projection=thismap) or figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
-        image = thismap.plot(vmin=-500, vmax=500, axes=axes)
+        image = magproc.plot(vmin=-500, vmax=500, axes=axes)
         axes.coords.grid(False)
     # Draw solar lat/lon grid
         overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
 #    plt.colorbar(label='B [G]')
     # Overlay PILs and SMART detections
-        plt.contour(pslmap.data, origin='lower',
-                colors='yellow', linewidths=0.5,
-                vmin=0., vmax=np.max(np.unique(thisar.data))+1)
+ #       plt.contour(pslmap.data, origin='lower',
+ #               colors='yellow', linewidths=0.5,
+ #               vmin=0., vmax=np.max(np.unique(thisar.data))+1)
         plt.contour(thisar.data>0., origin='lower',
                 colors='blue', linewidths=1.0,
                 vmin=0., vmax=np.max(np.unique(thisar.data))+1)
         plt.savefig(data_dir+smartdate+'.eps')
+        plt.close()
 
-    # Output SMART detection
+    # Output SMART detection and map
         thisar.save(data_dir+smartdate+'_detections.fits')
+        magproc.save(data_dir+smartdate+'_map.fits')
 
     # How long did that take?
         print(str(smartdate))
