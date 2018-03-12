@@ -45,9 +45,9 @@ def ar_processmag(inmap, medianfilter):
     config = ConfigParser()
     config.read("config.ini")
     ## Rotate
-#    inmap = inmap.rotate(angle=int(inmap.meta['crota2'])*u.deg)
-#    inmap = inmap.resample(u.Quantity([1024, 1024], u.pixel))
-#    inmap.meta['crota2'] = 0.
+    inmap = inmap.rotate(angle=int(inmap.meta['crota2'])*u.deg)
+    inmap = inmap.resample(u.Quantity([1024, 1024], u.pixel))
+    inmap.meta['crota2'] = 0.
     # I commented out above as it was just adding way too much limb noise, so instead doing a hacky way
     if (inmap.meta['crota2'] >= 100.):
         data = np.flip(inmap.data, 1)[::-1]
