@@ -49,18 +49,12 @@ if __name__ == "__main__":
 #    data_dir = '/Users/sophie/data/smart/' #'/Users/sophie/Dropbox/'
 #    thismap = sunpy.map.Map(data_dir + 'test.fits')
 
-    # Need to downsample if 4096x4096
+    # Need to downsample if 4096x4096 or if above rotation used
     # (generally shouldnt be if using near-real-time JSOC data)
-    if thismap.meta['naxis1'] == 4096:
+    if thismap.dimensions[0].value != 1024:
         thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
         thismap.meta['naxis1'] = 1024
         thismap.meta['naxis2'] = 1024
-
-    # Rotate map if necessary
-    if (thismap.meta['crota2'] >= 100.):
-        data = np.flip(thismap.data, 1)[::-1]
-        thismap = sunpy.map.Map(data, thismap.meta)
-        thismap.meta['crota2'] = 0.
 
     # Now process magnetogram
     print('Processing data')
@@ -100,16 +94,16 @@ if __name__ == "__main__":
     # Visualise
     ## Just something simple for my testing - to be replaced by propert SolarMonitor stuff eventually...
     figure = plt.figure()
-    axes = wcsaxes_compat.gca_wcs(thismap.wcs)
+    axes = wcsaxes_compat.gca_wcs(magproc.wcs)
     ## Alternatively, axes=plt.subplot(projection=thismap) or figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
-    image = thismap.plot(vmin=-500, vmax=500, axes=axes)
+    image = magproc.plot(vmin=-500, vmax=500, axes=axes)
     axes.coords.grid(False)
     # Draw solar lat/lon grid
     overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
     plt.colorbar(label='B [G]')
     # Overlay PILs and SMART detections
     plt.contour(pslmap.data, origin='lower',
-                colors='yellow', linewidths=0.5,
+                colors='lightblue', linewidths=1,
                 vmin=0., vmax=np.max(np.unique(thisar.data))+1)
     plt.contour(thisar.data>0., origin='lower',
                 colors='blue', linewidths=1.0,
@@ -118,6 +112,8 @@ if __name__ == "__main__":
 
     # How long did that take?
     print('Runtime:', round(time.time() - start_time),'seconds')
+
+
 
 
 # ======================================
