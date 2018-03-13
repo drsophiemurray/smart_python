@@ -39,29 +39,19 @@ import json
 import time
 from ar_plot import grid_overlay
 from sunpy.visualization import wcsaxes_compat
+from astropy.coordinates import SkyCoord
 
 if __name__ == "__main__":
     # First load the latest HMI data file
     start_time = time.time()
-#    thismap, data_dir = ar_readmag()
     import os
-    data_dir = "/Users/sophie/data/smart/testing/"
+    data_dir = "/Users/sophie/data/smart/python_test/"
     for file in os.listdir(data_dir):
         thismap = sunpy.map.Map(data_dir+file)
-    # Currently manually loading for testing purposes, rather than using automatic scraping code above.
-#    print('Loading fits file')
-#    data_dir = '/Users/sophie/data/smart/' #'/Users/sophie/Dropbox/'
-#     thismap = sunpy.map.Map(data_dir + 'test.fits')
 
-    # Rotate map if necessary
-        if (thismap.meta['crota2'] >= 100.):
-            data = np.flip(thismap.data, 1)[::-1]
-            thismap = sunpy.map.Map(data, thismap.meta)
-            thismap.meta['crota2'] = 0.
-
-            # Need to downsample if 4096x4096
+    # Need to downsample if 4096x4096
     # (generally shouldnt be if using near-real-time JSOC data)
-        if thismap.meta['naxis1'] == 4096:
+        if thismap.meta['naxis1'] != 1024:
             thismap = thismap.resample(u.Quantity([1024, 1024], u.pixel))
             thismap.meta['naxis1'] = 1024
             thismap.meta['naxis2'] = 1024
@@ -104,8 +94,10 @@ if __name__ == "__main__":
     # Visualise
     ## Just something simple for my testing - to be replaced by propert SolarMonitor stuff eventually...
         figure = plt.figure()
-        axes = wcsaxes_compat.gca_wcs(thismap.wcs)
-    ## Alternatively, axes=plt.subplot(projection=thismap) or figure.add_axes([0,0,.8,.8], projection=thismap.wcs)
+        bottom_left = SkyCoord(-1000 * u.arcsec, -1000 * u.arcsec, frame=magproc.coordinate_frame)
+        top_right = SkyCoord(1000 * u.arcsec, 1000 * u.arcsec, frame=magproc.coordinate_frame)
+        submap = magproc.submap(bottom_left, top_right)
+        axes = wcsaxes_compat.gca_wcs(magproc.wcs)
         image = magproc.plot(vmin=-500, vmax=500, axes=axes)
         axes.coords.grid(False)
     # Draw solar lat/lon grid
@@ -128,15 +120,3 @@ if __name__ == "__main__":
     # How long did that take?
         print(str(smartdate))
         print('Runtime:', round(time.time() - start_time),'seconds')
-
-
-# ======================================
-# Some IDL fits files used for testing:
-#    thismap_idl = sunpy.map.Map('/Users/sophie/data/smart/latest.fits')
-#    magproc_idl = sunpy.map.Map('magproc.fits')
-#    thissm_idl = sunpy.map.Map('thissm.fits')
-#    thisar_idl = sunpy.map.Map('thisar.fits')
-#    thismaskmap_idl = sunpy.map.Map('thismaskmap.fits')
-#    thismask_idl = thismaskmap_idl.data
-#'/Users/sophie/sunpy/data/hmi_m_45s_2011_10_17_00_01_30_tai_magnetogram.fits'
-#'/Users/sophie/Downloads/hmi.M_720s.20140921_120000_TAI.fits'
