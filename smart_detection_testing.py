@@ -96,20 +96,29 @@ if __name__ == "__main__":
         figure = plt.figure()
         bottom_left = SkyCoord(-1000 * u.arcsec, -1000 * u.arcsec, frame=magproc.coordinate_frame)
         top_right = SkyCoord(1000 * u.arcsec, 1000 * u.arcsec, frame=magproc.coordinate_frame)
-        submap = magproc.submap(bottom_left, top_right)
-        axes = wcsaxes_compat.gca_wcs(magproc.wcs)
-        image = magproc.plot(vmin=-500, vmax=500, axes=axes)
+        submag = magproc.submap(bottom_left, top_right)
+        subar = thisar.submap(bottom_left, top_right)
+        subpsl = pslmap.submap(bottom_left, top_right)
+        axes = wcsaxes_compat.gca_wcs(submag.wcs)
+        image = submag.plot(vmin=-500, vmax=500, axes=axes)
         axes.coords.grid(False)
-    # Draw solar lat/lon grid
+        #limb nans
+        limbmask[np.where(limbmask == 0.)] = np.nan
+        limbmap = sunpy.map.Map(limbmask, magproc.meta)
+        sublimb = limbmap.submap(bottom_left, top_right)
+        submag.data = submag.data*sublimb.data
+        subar.data = subar.data * sublimb.data
+        subpsl.data = subpsl.data * sublimb.data
+        # Draw solar lat/lon grid
         overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
 #    plt.colorbar(label='B [G]')
     # Overlay PILs and SMART detections
- #       plt.contour(pslmap.data, origin='lower',
+ #       plt.contour(subpsl.data, origin='lower',
  #               colors='yellow', linewidths=0.5,
  #               vmin=0., vmax=np.max(np.unique(thisar.data))+1)
-        plt.contour(thisar.data>0., origin='lower',
+        plt.contour(subar.data>0., origin='lower',
                 colors='blue', linewidths=1.0,
-                vmin=0., vmax=np.max(np.unique(thisar.data))+1)
+                vmin=0., vmax=np.max(np.unique(subar.data))+1)
         plt.savefig(data_dir+smartdate+'.eps')
         plt.close()
 
