@@ -167,10 +167,11 @@ def ar_cosmap(inmap):
 
 def fix_limb(data, rrdeg, limbmask):
     """
-    Zero off-limb pixels (zero from 80 degrees to LOS).
+    Zero off-limb pixels (zero from 90 degrees to LOS).
+    (Note originally in IDL code it was 80 but I felt that it was cutting too much off)
     This is making the edge a bit smaller.
     """
-    maxlimb = 80.
+    maxlimb = 90.
     wofflimb = np.where(((rrdeg/(2.*np.pi))*360.) > maxlimb)
     data[wofflimb] = 0.
     limbmask[wofflimb] = 0.
