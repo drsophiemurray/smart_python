@@ -45,7 +45,7 @@ if __name__ == "__main__":
     # First load the latest HMI data file
     start_time = time.time()
     import os
-    data_dir = "/Users/sophie/data/smart/python_test/"
+    data_dir = "/Users/sophie/data/smart/python_test_limb/"
     for file in os.listdir(data_dir):
         thismap = sunpy.map.Map(data_dir+file)
 
@@ -93,23 +93,24 @@ if __name__ == "__main__":
 
     # Visualise
     ## Just something simple for my testing - to be replaced by propert SolarMonitor stuff eventually...
-        figure = plt.figure()
+        # same size if rotated
         bottom_left = SkyCoord(-1000 * u.arcsec, -1000 * u.arcsec, frame=magproc.coordinate_frame)
         top_right = SkyCoord(1000 * u.arcsec, 1000 * u.arcsec, frame=magproc.coordinate_frame)
         submag = magproc.submap(bottom_left, top_right)
         subar = thisar.submap(bottom_left, top_right)
         subpsl = pslmap.submap(bottom_left, top_right)
-        axes = wcsaxes_compat.gca_wcs(submag.wcs)
-        image = submag.plot(vmin=-500, vmax=500, axes=axes)
-        axes.coords.grid(False)
-        #limb nans
+        # limb nans
         limbmask[np.where(limbmask == 0.)] = np.nan
         limbmap = sunpy.map.Map(limbmask, magproc.meta)
         sublimb = limbmap.submap(bottom_left, top_right)
-        submag.data = submag.data*sublimb.data
-        subar.data = subar.data * sublimb.data
-        subpsl.data = subpsl.data * sublimb.data
+        submag = sunpy.map.Map(submag.data*sublimb.data, submag.meta)
+        subar = sunpy.map.Map(subar.data*sublimb.data, subar.meta)
+        subpsl = sunpy.map.Map(subpsl.data*sublimb.data, subpsl.meta)
         # Draw solar lat/lon grid
+        figure = plt.figure()
+        axes = wcsaxes_compat.gca_wcs(submag.wcs)
+        image = submag.plot(vmin=-500, vmax=500, axes=axes)
+        axes.coords.grid(False)
         overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
 #    plt.colorbar(label='B [G]')
     # Overlay PILs and SMART detections
