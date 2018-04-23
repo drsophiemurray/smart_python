@@ -40,6 +40,7 @@ import time
 from ar_plot import grid_overlay
 from sunpy.visualization import wcsaxes_compat
 from astropy.coordinates import SkyCoord
+import subprocess
 
 if __name__ == "__main__":
     # First load the latest HMI data file
@@ -114,6 +115,10 @@ if __name__ == "__main__":
                 colors='blue', linewidths=1.0,
                 vmin=0., vmax=np.max(np.unique(thisar.data))+1)
     plt.savefig(data_dir+smartdate+'_detections.eps')
+
+    # Delete fits files for now for Met Office
+    sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])
+    subprocess.call(sys_call, shell = True)
 
     # How long did that take?
     print('Runtime:', round(time.time() - start_time),'seconds')
