@@ -14,9 +14,9 @@
     - Visualise output for SolarMonitor.org
 
     TODO:
-    - Finish de-projection code in ar_pslprop.py
-    - Get rid of 'ar_' naming scheme
-    - Put stuff in sub codes under main and not their own function a.l.a Higgo
+    - Merge Sean's tracking code
+    - Finish de-projection code in ar_pslprop.py (merge from Sean's work)
+    - Get rid of 'ar_' naming scheme and main function naming a.l.a Higgins version
     - Fix numbers in json files (all those unnecessary significant figures...)
     - Make better way to plot lat/lon grid rather than hacky version
 '''
