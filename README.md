@@ -1,1 +1,3 @@
 # smart_python
+
+A line-by-line translation of SMART IDL. Not yet prettified...
