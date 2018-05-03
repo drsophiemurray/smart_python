@@ -36,7 +36,7 @@ import sunpy.map
 import astropy.units as u
 from astropy.convolution import convolve
 
-def ar_processmag(inmap, medianfilter):
+def main(inmap, medianfilter):
     """Load input paramters, remove cosmic rays and NaNs,
     then make all off-limb pixels zero, and clean up limb,
     rotate map and do a cosine correction.
@@ -205,4 +205,4 @@ def myround(x, base=5):
     return int(base * round(float(x)/base))
 
 if __name__ == '__main__':
-    ar_processmag()
+    main()

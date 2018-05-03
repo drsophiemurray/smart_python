@@ -33,7 +33,7 @@ from skimage import filters
 import cv2
 
 
-def ar_detect(inmap, limbmask):
+def main(inmap, limbmask):
     """
     Make detection mask of ARs with mask values ordered.
     """
@@ -190,4 +190,4 @@ def ar_order_mask(maskfull, sz):
     return maskorder
 
 if __name__ == '__main__':
-    ar_detect()
+    main()

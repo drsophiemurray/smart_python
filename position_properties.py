@@ -15,13 +15,13 @@
 '''
 
 import numpy as np
-from ar_detect import xyrcoord, ar_pxscale
+from detect import xyrcoord, ar_pxscale
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from sunpy.coordinates import frames
 import pandas as pd
 
-def ar_posprop(inmap, inmask, cosmap):
+def main(inmap, inmask, cosmap):
     """
     Determine the AR positions, given mask indices.
     """
@@ -147,4 +147,5 @@ def hc2hg(inmap, hcxbnd, hcybnd):
     carrington = heliographic.transform_to(frames.HeliographicCarrington)
     return heliographic.lon.value, heliographic.lat.value, carrington.lon.value
 
-
+if __name__ == '__main__':
+    main()

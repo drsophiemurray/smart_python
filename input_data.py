@@ -28,7 +28,7 @@ import urllib.request
 from configparser import ConfigParser
 import sunpy.map
 
-def ar_readmag():
+def main():
     """Grab latest fits file time from JSOC.
     First find the latest url, download that using the fits file name.
     Then read it with SunPy and make a plot.
@@ -80,4 +80,4 @@ def web_request(url):
     return web_file
 
 if __name__ == '__main__':
-    ar_readmag()
+    main()

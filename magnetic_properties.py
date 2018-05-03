@@ -20,10 +20,10 @@
 
 from configparser import ConfigParser
 import numpy as np
-from ar_detect import ar_pxscale
+from detect import ar_pxscale
 import pandas as pd
 
-def ar_magprop(inmap, inmask, cosmap):
+def main(inmap, inmask, cosmap):
     """
     Determine simple AR magnetic properties.
     """
@@ -85,3 +85,6 @@ def ar_magprop(inmap, inmask, cosmap):
                              'posflx': posflx, 'negflx': negflx, 'totflx': totflx,
                              'imbflx': imbflx, 'frcflx': frcflx}], ignore_index=True)
     return magdf
+
+if __name__ == '__main__':
+    main()

@@ -24,20 +24,20 @@
 from configparser import ConfigParser
 import numpy as np
 import sunpy.map
-from ar_detect import xyrcoord, ar_grow, ar_pxscale
-from ar_posprop import px2hc, hc2hg
+from detect import xyrcoord, ar_grow, ar_pxscale
+from position_properties import px2hc, hc2hg
 from sunpy.sun import constants
 import pandas as pd
 import scipy.interpolate
 import scipy.ndimage
 import astropy.units as u
-from ar_processmag import remove_nans
+from process_magnetogram import remove_nans
 from skimage.morphology import skeletonize
 from skimage import measure
 from astropy.convolution import convolve, Box2DKernel
 
 
-def ar_pslprop(inmap, inmask, doproj, projmaxscale):
+def main(inmap, inmask, doproj, projmaxscale):
     """
     Determine complex PIL magnetic properties.
     """
@@ -320,3 +320,6 @@ def pix_to_arc(inmap, x, y):
     arc_x = (x - (inmap.meta['crpix1'] - 1)) * inmap.meta['cdelt1'] + inmap.meta['crval1']
     arc_y = (y - (inmap.meta['crpix2'] - 1)) * inmap.meta['cdelt2'] + inmap.meta['crval2']
     return ((arc_x, arc_y))
+
+if __name__ == '__main__':
+    main()

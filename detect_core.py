@@ -21,7 +21,7 @@
 '''
 
 from configparser import ConfigParser
-from ar_detect import ar_pxscale, ar_grow
+from detect import ar_pxscale, ar_grow
 from skimage.morphology import watershed
 import numpy as np
 from skimage.morphology import skeletonize
@@ -31,7 +31,7 @@ import sunpy.map
 from scipy import ndimage as nd
 
 
-def ar_detect_core(inmap, inmask):
+def main(inmap, inmask):
     """
     Make detection mask of ARs with mask values ordered
     to a more limited extent that ar_detect
@@ -159,4 +159,4 @@ def ar_core2mask(data):
     return coremask, np.ceil(smartmask), np.ceil(smartconn)
 
 if __name__ == '__main__':
-    ar_detect_core()
+    main()
