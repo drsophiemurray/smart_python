@@ -28,7 +28,7 @@ import urllib.request
 from configparser import ConfigParser
 import sunpy.map
 
-def main():
+def main(data_dir):
     """Grab latest fits file time from JSOC.
     First find the latest url, download that using the fits file name.
     Then read it with SunPy and make a plot.
@@ -38,7 +38,6 @@ def main():
     config.read("config.ini")
     ## Get latest fits file
     link = get_link(config.get('input','fits_source'), int(config.get('input','strip_no')))
-    data_dir = "".join([os.path.expanduser('~'), config.get('paths','data_dir')])
     fits = download(link,folder=data_dir)
     ## Read file and output
     thismap = sunpy.map.Map(fits)

@@ -42,17 +42,25 @@ import time
 from sunpy.visualization import wcsaxes_compat
 from astropy.coordinates import SkyCoord
 import subprocess
+from configparser import ConfigParser
+import os
 
-def main(data_dir='/Users/sophie/data/smart/', fitsfile='hmi.M_720s.20170906_120000_TAI.fits'):
+def main(fitsfile='hmi.M_720s.20170906_120000_TAI.fits'):
     """
 
     :param file:
     :return:
     """
+    # Load configuration file
+    config = ConfigParser()
+    config.read("config.ini")
+    # Get directory
+    data_dir = "".join([os.path.expanduser('~'), config.get('paths','data_dir')])
+    # Load time to see how long this will take
     start_time = time.time()
     # First load the latest HMI data file
     if fitsfile is None:
-        inmap, data_dir = input_data.main()
+        inmap = input_data.main(data_dir)
     else:
         inmap = sunpy.map.Map(data_dir+fitsfile)
 
