@@ -22,6 +22,19 @@
 '''
 
 
+from configparser import ConfigParser
+import json
+import os
+import time
+import subprocess
+import matplotlib.pylab as plt
+import numpy as np
+import pandas as pd
+import sunpy.map
+from sunpy.visualization import wcsaxes_compat
+import astropy.units as u
+from astropy.coordinates import SkyCoord
+
 import input_data
 import process_magnetogram
 import detect
@@ -31,19 +44,6 @@ import magnetic_properties
 import psl_properties
 from plot_detections import grid_overlay
 
-import astropy.units as u
-import sunpy.map
-import matplotlib.pylab as plt
-import pandas as pd
-import datetime
-import numpy as np
-import json
-import time
-from sunpy.visualization import wcsaxes_compat
-from astropy.coordinates import SkyCoord
-import subprocess
-from configparser import ConfigParser
-import os
 
 def main(**fits_file):
     """
@@ -55,7 +55,7 @@ def main(**fits_file):
     config = ConfigParser()
     config.read("config.ini")
     # Get directory
-    data_dir = "".join([os.path.expanduser('~'), config.get('paths','data_dir')])
+    data_dir = "".join([os.path.expanduser('~'), config.get('paths', 'data_dir')])
     # Load time to see how long this will take
     start_time = time.time()
     # First load the latest HMI data file
@@ -84,7 +84,8 @@ def main(**fits_file):
     print('Calculating properties')
     posprop = position_properties.main(processedmap, coredetectionmap.data, cosmap)
     magprop = magnetic_properties.main(processedmap, coredetectionmap.data, cosmap)
-    pslprop = psl_properties.main(processedmap, coredetectionmap.data, doproj=False, projmaxscale=1024)
+    pslprop = psl_properties.main(processedmap, coredetectionmap.data,
+                                  doproj=False, projmaxscale=1024)
 
     # Output to json
     smartdate = inmap.date.strftime('%Y%m%d_%H%M')
@@ -102,11 +103,11 @@ def main(**fits_file):
         obj = json.load(infile)
     with open(data_dir+smartdate+'_properties.json', 'w') as outfile:
         json.dump(obj, outfile,
-#                  sort_keys=True,
                   indent=4, separators=(',', ': '))
 
     # Visualise
-    ## Just something simple for my testing - to be replaced by proper SolarMonitor stuff eventually...
+    ## Just something simple for my testing
+    ## - to be replaced by proper SolarMonitor stuff eventually...
     figure = plt.figure()
     # Get same axes
     bottom_left = SkyCoord(-1000*u.arcsec, -1000*u.arcsec, frame=processedmap.coordinate_frame)
@@ -122,7 +123,7 @@ def main(**fits_file):
     plt.contour(pslmap.data, origin='lower',
                 colors='lightblue', linewidths=1,
                 vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
-    plt.contour(coredetectionmap.data>0., origin='lower',
+    plt.contour(coredetectionmap.data > 0., origin='lower',
                 colors='blue', linewidths=1.0,
                 vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
     plt.savefig(data_dir+smartdate+'_detections.eps')
@@ -132,7 +133,7 @@ def main(**fits_file):
     subprocess.call(sys_call, shell=True)
 
     # How long did that take?
-    print('Runtime:', round(time.time() - start_time),'seconds')
+    print('Runtime:', round(time.time() - start_time), 'seconds')
 
 
 if __name__ == "__main__":
