@@ -37,14 +37,14 @@ def main(data_dir):
     config = ConfigParser()
     config.read("config.ini")
     ## Get latest fits file
-    link = get_link(config.get('input','fits_source'), int(config.get('input','strip_no')))
-    fits = download(link,folder=data_dir)
+    link = get_link(config.get('input', 'fits_source'), int(config.get('input', 'strip_no')))
+    fits = download(link, folder=data_dir)
     ## Read file and output
     thismap = sunpy.map.Map(fits)
     thismap.save(data_dir + 'latest.fits', filetype='auto')
     return thismap, data_dir
 
-def get_link(url,strip_no):
+def get_link(url, strip_no):
     """Standard URL grab, making sure the latest version is downloaded.
     Strip number included as currently there is descriptive JSOC text before the http is written.
     Also have to decode from bytes.
@@ -54,7 +54,7 @@ def get_link(url,strip_no):
     link = link.strip()[strip_no::]
     return link.decode("utf-8")
 
-def download(url,folder):
+def download(url, folder):
     """Copy the contents of a file from a given URL
     to a defined folder.
     """
