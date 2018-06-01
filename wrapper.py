@@ -45,7 +45,7 @@ import subprocess
 from configparser import ConfigParser
 import os
 
-def main(fitsfile='hmi.M_720s.20170906_120000_TAI.fits'):
+def main(**fits_file):
     """
 
     :param file:
@@ -59,10 +59,10 @@ def main(fitsfile='hmi.M_720s.20170906_120000_TAI.fits'):
     # Load time to see how long this will take
     start_time = time.time()
     # First load the latest HMI data file
-    if fitsfile is None:
+    if not fits_file:
         inmap = input_data.main(data_dir)
     else:
-        inmap = sunpy.map.Map(data_dir+fitsfile)
+        inmap = sunpy.map.Map(data_dir+fits_file)
 
     # Downsample if 4096x4096 (generally shouldnt be if using near-real-time JSOC data)
     if inmap.dimensions[0].value != 1024:
