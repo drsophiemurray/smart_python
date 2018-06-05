@@ -50,7 +50,7 @@ yyyymmdd_HHMM_properties.json contains SMART detection properties, including pos
 |  | bipolesep_mm | bipole separation of detection (units are megameters) |
 |  | bipolesep_px | bipole separation of detection (units are pixels) |
 
-*note PIL properties might have zeros since deprojection not implemented (see issue).
+*note PIL properties might have zeros since deprojection not implemented (see issue [#3](https://github.com/sophiemurray/smart_python/issues/3)).
 
 License
 -------

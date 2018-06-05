@@ -1,24 +1,8 @@
 '''
-    Solar Monitor Active Region Tracker
-    ===================================
-    Written by Sophie A. Murray, code originally developed by Paul Higgins (IDL SMART wrapper).
-    - Code translated line-by-line and operates as close to IDL code as possible.
+    SMART tests
 
     Developed under Python 3 and Sunpy 0.8.3
     - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
-
-    Steps:
-    - Read HMI magnetogram and process it
-    - Find 'magnetically interesting regions' and calculate properties of interest
-    - Track regions from previous six hours
-    - Visualise output for SolarMonitor.org
-
-    TODO:
-    - Finish de-projection code in ar_pslprop.py
-    - Get rid of 'ar_' naming scheme
-    - Put stuff in sub codes under main and not their own function a.l.a Higgo
-    - Fix numbers in json files (all those unnecessary significant figures...)
-    - Make better way to plot lat/lon grid rather than hacky version
 '''
 
 
