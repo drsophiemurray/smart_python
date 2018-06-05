@@ -27,13 +27,10 @@ import json
 import os
 import time
 import subprocess
-import matplotlib.pylab as plt
 import numpy as np
 import pandas as pd
 import sunpy.map
-from sunpy.visualization import wcsaxes_compat
 import astropy.units as u
-from astropy.coordinates import SkyCoord
 
 import input_data
 import process_magnetogram
@@ -42,10 +39,10 @@ import detect_core
 import position_properties
 import magnetic_properties
 import psl_properties
-from plot_detections import grid_overlay
+import plot_detections
 
 
-def main(**fits_file):
+def main(*fits_file, track=False):
     """
 
     :param file:
@@ -108,25 +105,8 @@ def main(**fits_file):
     # Visualise
     ## Just something simple for my testing
     ## - to be replaced by proper SolarMonitor stuff eventually...
-    figure = plt.figure()
-    # Get same axes
-    bottom_left = SkyCoord(-1000*u.arcsec, -1000*u.arcsec, frame=processedmap.coordinate_frame)
-    top_right = SkyCoord(1000*u.arcsec, 1000*u.arcsec, frame=processedmap.coordinate_frame)
-    submap = processedmap.submap(bottom_left, top_right)
-    axes = wcsaxes_compat.gca_wcs(processedmap.wcs)
-    image = processedmap.plot(vmin=-500, vmax=500, axes=axes)
-    axes.coords.grid(False)
-    # Draw solar lat/lon grid
-    overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
-    plt.colorbar(label='B [G]')
-    # Overlay PILs and SMART detections
-    plt.contour(pslmap.data, origin='lower',
-                colors='lightblue', linewidths=1,
-                vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
-    plt.contour(coredetectionmap.data > 0., origin='lower',
-                colors='blue', linewidths=1.0,
-                vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
-    plt.savefig(data_dir+smartdate+'_detections.eps')
+    plot_detections.main(processedmap, coredetectionmap,  pslmap,
+                         data_dir, smartdate)
 
     # Delete fits files for now for Met Office
     sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])
