@@ -5,6 +5,9 @@ smart_python
 
 Take an SDO magnetogram and run SMART to detect magnetically interesting regions. In default mode, a .json property file and .png image of detections will be output.
 
+Optional keyword inputs:
+- `fits_file` run SMART on specifically defined fits file (default will take latest available fits from JSOC)
+
 JSON output
 -----------
 yyyymmdd_HHMM_properties.json contains SMART detection properties, including position, magnetic, and PIL properties* 
