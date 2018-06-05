@@ -66,7 +66,6 @@ External dependencies
     pandas
     scikit_image
     scipy
-    skimage
     sunpy
 
 See `requirements.txt` for latest development versions created with pipreqs.
