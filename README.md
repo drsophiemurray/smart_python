@@ -12,6 +12,7 @@ Currently to run use the wrapper, e.g.,
 Optional keyword inputs:
 - `fits_file` run SMART on specifically defined fits file (default will take latest available fits from JSOC)
 
+
 JSON output
 -----------
 yyyymmdd_HHMM_properties.json contains SMART detection properties, including position, magnetic, and PIL properties* 
@@ -55,6 +56,20 @@ yyyymmdd_HHMM_properties.json contains SMART detection properties, including pos
 |  | bipolesep_px | bipole separation of detection (units are pixels) |
 
 *note PIL properties might have zeros since deprojection not implemented (see issue [#3](https://github.com/sophiemurray/smart_python/issues/3)).
+
+External dependencies
+---------------------
+
+    astropy
+    matplotlib
+    numpy
+    pandas
+    scikit_image
+    scipy
+    skimage
+    sunpy
+
+See `requirements.txt` for latest development versions created with pipreqs.
 
 License
 -------
