@@ -62,7 +62,7 @@ def main(**fits_file):
     if not fits_file:
         inmap = input_data.main(data_dir)
     else:
-        inmap = sunpy.map.Map(data_dir+fits_file)
+        inmap = sunpy.map.Map(data_dir+fits_file['fits_file'])
 
     # Downsample if 4096x4096 (generally shouldnt be if using near-real-time JSOC data)
     if inmap.dimensions[0].value != 1024:

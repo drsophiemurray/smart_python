@@ -42,7 +42,7 @@ def main(data_dir):
     ## Read file and output
     thismap = sunpy.map.Map(fits)
     thismap.save(data_dir + 'latest.fits', filetype='auto')
-    return thismap, data_dir
+    return thismap
 
 def get_link(url, strip_no):
     """Standard URL grab, making sure the latest version is downloaded.
