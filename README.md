@@ -9,8 +9,8 @@ JSON output
 -----------
 yyyymmdd_HHMM_properties.json contains SMART detection properties, including position, magnetic, and PIL properties* 
 
-| Section       | Subsection    | Description |
-| :------ |:-------------:| -----: |
+| Section | Subsection | Description |
+| :------ | :--------- | :---------- |
 | meta | dateobs | time of observation | 
 |  | dimension | pixel resolution |
 |  | instrument | observation source |
