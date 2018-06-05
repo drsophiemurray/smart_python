@@ -53,3 +53,7 @@ pslprop
 - `bipolesep_px` bipole separation of detection (units are pixels)
 
 *note PIL properties might have zeros since deprojection not implemented (see issue).
+
+License
+-------
+The content of this project is licensed under the [Creative Commons Attribution 4.0 license](https://creativecommons.org/licenses/by/4.0/), and the underlying source code used to format and display that content is licensed under the [MIT license](https://opensource.org/licenses/mit-license.php). Please reference the original Higgins et al publication in all instances and relevant GitHub repositries if using the code.
