@@ -1,7 +1,7 @@
 smart_python
 ============
 
-*A line-by-line translation of SMART IDL. Not yet prettified...*
+*A line-by-line translation of SMART IDL. A work in progress...*
 
 Take an SDO magnetogram and run SMART to detect magnetically interesting regions. In default mode, a .json property file and .png image of detections will be output.
 Currently to run use the wrapper, e.g.,
@@ -10,11 +10,14 @@ Currently to run use the wrapper, e.g.,
     wrapper.main(fits_file='hmi.M_720s.20170906_120000_TAI.fits')
 
 Optional keyword inputs:
-- `fits_file` run SMART on specifically defined fits file (default will take latest available fits from JSOC)
+- `fits_file`: run SMART on specifically defined fits file (default will take latest available fits from JSOC)
+
+Optional outputs:
+- Save fits files of magnetogram and detections (to be added)
 
 JSON output
 -----------
-yyyymmdd_HHMM_properties.json contains SMART detection properties, including position, magnetic, and PIL properties* 
+The code will output a JSON file in the format `yyyymmdd_HHMM_properties.json`, which contains property values for all detected SMART regions (blank file if none), including position, magnetic, and polarity separation line information*
 
 | Section | Subsection          | Description                                                                                    |
 | :------ | :---------          | :----------                                                                                    |
