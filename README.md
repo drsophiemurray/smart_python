@@ -12,14 +12,13 @@ Currently to run use the wrapper, e.g.,
 Optional keyword inputs:
 - `fits_file` run SMART on specifically defined fits file (default will take latest available fits from JSOC)
 
-
 JSON output
 -----------
 yyyymmdd_HHMM_properties.json contains SMART detection properties, including position, magnetic, and PIL properties* 
 
 | Section | Subsection          | Description                                                                                    |
 | :------ | :---------          | :----------                                                                                    |
-| meta    | dateobs             | time of observation                                                                            |
+| meta    | dateobs             | time of observation (yyyymmdd_HHMM)                                                            |
 |         | dimension           | pixel resolution                                                                               |
 |         | instrument          | observation source                                                                             |
 | posprop | arid                | SMART detection no.                                                                            |
@@ -47,15 +46,21 @@ yyyymmdd_HHMM_properties.json contains SMART detection properties, including pos
 |         | bmax                | total positive magnetic field strength of detection (gauss)                                    |
 |         | bmean               | mean magnetic field strength of detection (gauss)                                              |
 | pslprop | arid                | SMART detection no.                                                                            |
-|         | psllength           | polarity inversion line length of detection (units are megameters)                             |
+|         | psllength           | polarity inversion line length of detection (megameters)                                       |
 |         | pslsglength         | strong gradient PIL length (megameters)                                                        |
 |         | pslcurvature        | curvature of PIL                                                                               |
 |         | rvalue              | r value (maxwell)                                                                              |
 |         | wlsg                | gradient-weighted integral length of PIL (gauss)                                               |
-|         | bipolesep_mm        | bipole separation of detection (units are megameters)                                          |
-|         | bipolesep_px        | bipole separation of detection (units are pixels)                                              |
+|         | bipolesep_mm        | bipole separation of detection (megameters)                                                    |
+|         | bipolesep_px        | bipole separation of detection (pixels)                                                        |
 
 *note PIL properties might have zeros since deprojection not implemented (see issue [#3](https://github.com/sophiemurray/smart_python/issues/3)).
+
+Tracking
+--------
+
+SMART can be run in 'tracking' mode, where the evolution of SMART properties will be plotted over time since the last detection (default six hours previous). The code, developed by Sean Blake, can also be run stand alone, as long as default json and optional processed fits files are available (see optional outputs above - to be added).
+More description to be added once integration is complete!
 
 External dependencies
 ---------------------
