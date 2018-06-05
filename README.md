@@ -4,6 +4,10 @@ smart_python
 *A line-by-line translation of SMART IDL. Not yet prettified...*
 
 Take an SDO magnetogram and run SMART to detect magnetically interesting regions. In default mode, a .json property file and .png image of detections will be output.
+Currently to run use the wrapper, e.g.,
+
+    import wrapper
+    wrapper.main(fits_file='hmi.M_720s.20170906_120000_TAI.fits')
 
 Optional keyword inputs:
 - `fits_file` run SMART on specifically defined fits file (default will take latest available fits from JSOC)
