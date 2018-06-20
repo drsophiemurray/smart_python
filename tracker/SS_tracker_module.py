@@ -1,30 +1,7 @@
-# TRY TO USE MASKS
-
-from pylab import *
-import sunpy.map
-import os
-from matplotlib import pyplot as plt
+import astropy.units
 import numpy as np
-from scipy.spatial import cKDTree
-from copy import deepcopy
 import operator
-
-import astropy.units 
-from astropy.coordinates import SkyCoord
-from sunpy.coordinates import frames
-
-from pylab import *
-import sunpy.map
-import os
-from matplotlib import pyplot as plt
-import numpy as np
-from scipy.spatial import cKDTree
-from copy import deepcopy
-import operator
-import SS_tracker_module as SS
 from sunpy.physics.differential_rotation import solar_rotate_coordinate
-
-import astropy.units as u
 from astropy.coordinates import SkyCoord
 from sunpy.coordinates import frames
 
@@ -368,7 +345,7 @@ def assign_numbers(old_SS, new_SS, overlap_matrix, num_of_ss):
 
 def write_out(out_filename, num_of_ss, old_SS):
     """
-    
+
     :param out_filename:
     :param num_of_ss:
     :param old_SS:
