@@ -14,6 +14,10 @@ output_folder = '/Users/sophie/data/smart/track_test_result/'
 ###############################################################################
 
 def main():
+    """
+
+    :return:
+    """
     # first image
     # read in json
     filenames = sorted(os.listdir(input_folder))

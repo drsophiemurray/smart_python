@@ -15,7 +15,10 @@ movie_folder = '/Users/sophie/data/smart/track_test_result/'
 
 ###############################################################################
 def main():
+    """
 
+    :return:
+    """
     filenames = sorted(os.listdir(json_folder))
     filename_dates = [datetime_from_file_string(x) for x in filenames]
 
@@ -120,8 +123,8 @@ def main():
 
 
 def datetime_from_json(data):
-    # convert timestring to datetime object
-
+    """convert timestring to datetime object
+    """
     a = data['meta']['dateobs']
     year = int(a[:4])
     month = int(a[4:6])
@@ -131,8 +134,8 @@ def datetime_from_json(data):
     return time1
 
 def datetime_from_file_string(a):
-    # convert timestring to datetime object
-
+    """convert timestring to datetime object
+    """
     year = int(a[:4])
     month = int(a[4:6])
     day = int(a[6:8])

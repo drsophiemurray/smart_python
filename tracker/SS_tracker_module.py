@@ -48,6 +48,12 @@ class SunSpot:
 
 
 def get_sunspot_data(yy, time1):
+    """
+
+    :param yy:
+    :param time1:
+    :return:
+    """
     master = []
     num_of_ss = np.max(yy.flatten())    # get number of different SS's
     centroids = []
@@ -87,12 +93,24 @@ def get_sunspot_data(yy, time1):
     return num_of_ss, master
 
 def euclidean_dist(ss1, ss2):
+    """
+
+    :param ss1:
+    :param ss2:
+    :return:
+    """
     lat1, lon1 = ss1.centroid
     lat2, lon2 = ss2.centroid
 
     return sqrt((lat1 - lat2)**2 + (lon1 - lon2)**2)
 
 def distance_matrix(sunspots1, sunspots2):
+    """
+
+    :param sunspots1:
+    :param sunspots2:
+    :return:
+    """
 
     N1 = len(sunspots1)
     N2 = len(sunspots2)
@@ -107,6 +125,11 @@ def distance_matrix(sunspots1, sunspots2):
     return distance_matrix
 
 def read_in_ss_file(filename):
+    """
+
+    :param filename:
+    :return:
+    """
     f = open(filename, 'r')
     data = f.readlines()
     f.close()
@@ -124,6 +147,12 @@ def read_in_ss_file(filename):
 # Functions for rotating the SS
 
 def pixels_to_latlon(x_pos, y_pos):
+    """
+
+    :param x_pos:
+    :param y_pos:
+    :return:
+    """
     radius = 489.5
     x_pos_from_center = -1*(512.5 - x_pos)
     angle_1 = np.rad2deg(np.arccos(x_pos_from_center/radius))
@@ -134,6 +163,12 @@ def pixels_to_latlon(x_pos, y_pos):
     return -1*angle_1, angle_2
 
 def latlon_to_pixels(lon, lat):
+    """
+
+    :param lon:
+    :param lat:
+    :return:
+    """
     radius = 489.5
     x_pos_from_center = radius * np.cos(np.deg2rad(lon))
     x_pos = x_pos_from_center + 512.5
@@ -144,8 +179,14 @@ def latlon_to_pixels(lon, lat):
     return x_pos, y_pos
 
 def rotate_SS(x_pos, y_pos, time1, time2):
-    # Rotate centroid of SS for given times
-
+    """
+    Rotate centroid of SS for given times
+    :param x_pos:
+    :param y_pos:
+    :param time1:
+    :param time2:
+    :return:
+    """
     lon, lat = pixels_to_latlon(x_pos, y_pos)
 
     hgx = astropy.units.Quantity(lon - 90., astropy.units.deg)
@@ -165,7 +206,12 @@ def rotate_SS(x_pos, y_pos, time1, time2):
 
 
 def make_overlap_matrix(old_SS, new_SS):
-    # make pixel-overlap matrix. #OLD = Y-axis, #NEW = X=axis
+    """
+    make pixel-overlap matrix. #OLD = Y-axis, #NEW = X=axis
+    :param old_SS:
+    :param new_SS:
+    :return:
+    """
     overlap_matrix = np.zeros((len(old_SS), len(new_SS)))
 
     for i1, v1 in enumerate(old_SS):
@@ -177,7 +223,13 @@ def make_overlap_matrix(old_SS, new_SS):
     return overlap_matrix
 
 def make_overlap_matrix_V1(old_SS, new_SS):
-    # make pixel-overlap matrix. #OLD = Y-axis, #NEW = X=axis
+    """
+    make pixel-overlap matrix. #OLD = Y-axis, #NEW = X=axis
+
+    :param old_SS:
+    :param new_SS:
+    :return:
+    """
     overlap_matrix = np.zeros((len(old_SS), len(new_SS)))
 
     time1 = old_SS[0].timestamp
@@ -209,7 +261,14 @@ def make_overlap_matrix_V1(old_SS, new_SS):
     return overlap_matrix
 
 def make_overlap_matrix_V2(old_SS, new_SS):
-    # make pixel-overlap matrix. #OLD = Y-axis, #NEW = X=axis
+    """
+    make pixel-overlap matrix. #OLD = Y-axis, #NEW = X=axis
+
+
+    :param old_SS:
+    :param new_SS:
+    :return:
+    """
     overlap_matrix = np.zeros((len(old_SS), len(new_SS)))
 
     time1 = old_SS[0].timestamp
@@ -233,6 +292,14 @@ def make_overlap_matrix_V2(old_SS, new_SS):
     return overlap_matrix
 
 def assign_numbers(old_SS, new_SS, overlap_matrix, num_of_ss):
+    """
+
+    :param old_SS:
+    :param new_SS:
+    :param overlap_matrix:
+    :param num_of_ss:
+    :return:
+    """
     # Now assign new sunspost numbers based off the old sunspots
     # if column is empty => new sunspot
     # if row is empty => old sunspot is retired
@@ -300,6 +367,13 @@ def assign_numbers(old_SS, new_SS, overlap_matrix, num_of_ss):
     return old_SS, new_SS, num_of_ss
 
 def write_out(out_filename, num_of_ss, old_SS):
+    """
+    
+    :param out_filename:
+    :param num_of_ss:
+    :param old_SS:
+    :return:
+    """
     f = open(out_filename, 'w')
     f.write(str(num_of_ss) + "\n")
 
