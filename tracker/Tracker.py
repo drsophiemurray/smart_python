@@ -1,26 +1,15 @@
-from pylab import *
-import sunpy.map
-import os
-from matplotlib import pyplot as plt
-import numpy as np
-from scipy.spatial import cKDTree
-from copy import deepcopy
-import operator
-import SS_tracker_module as SS
-from sunpy.physics.differential_rotation import solar_rotate_coordinate
-
-import astropy.units as u
-from astropy.coordinates import SkyCoord
-from sunpy.coordinates import frames
-
 import json
+import datetime
+import os
+import sunpy.map
+from copy import deepcopy
+import SS_tracker_module as SS
 
 ###############################################################################
 ################################################################################
 
-input_folder = '/Users/sophie/data/smart/track_test/'#"/home/blake/Drive/POSTDOC/SMART/json_test/input_data/"
-output_folder = '/Users/sophie/data/smart/track_test_result/'#"/home/blake/Drive/POSTDOC/SMART/json_test/output_data/"
-image_folder = '/Users/sophie/data/smart/track_test_result/'#"/home/blake/Drive/POSTDOC/SMART/json_test/output_images/"
+input_folder = '/Users/sophie/data/smart/track_test/'
+output_folder = '/Users/sophie/data/smart/track_test_result/'
 
 ###############################################################################
 
@@ -75,8 +64,6 @@ def main():
 
         count += 1
         print(count)
-        #if count > 50:
-        #    break
 
 
 def datetime_from_json(data):
@@ -89,6 +76,7 @@ def datetime_from_json(data):
     hour = int(a[9:11])
     time1 = datetime.datetime(year, month, day, hour)
     return time1
+
 
 
 if __name__ == '__main__':
