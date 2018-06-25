@@ -3,7 +3,7 @@ import datetime
 import os
 import sunpy.map
 from copy import deepcopy
-import SS_tracker_module as SS
+import tracking_modules
 
 ###############################################################################
 ################################################################################
@@ -29,12 +29,12 @@ def main():
 
     # read in map
     yy = sunpy.map.Map(input_folder + filename_stems[0] + extensions[1]).data
-    master_num_of_ss, old_SS = SS.get_sunspot_data(yy, time1)
+    master_num_of_ss, old_ss = tracking_modules.get_sunspot_data(yy, time1)
 
     # write out json with updated 'trueid' numbers
     true_id = {}
-    for index in range(len(old_SS)):
-        true_id[str(index)] = int(old_SS[index].number)
+    for index in range(len(old_ss)):
+        true_id[str(index)] = int(old_ss[index].number)
 
     json_data['posprop']['trueid'] = true_id
     with open(output_folder + filename_stems[0] + extensions[0], 'w') as outfile:
@@ -50,21 +50,21 @@ def main():
 
         # read in map
         yy2 = sunpy.map.Map(input_folder + filename_stem + extensions[1]).data
-        num_of_ss2, new_SS = SS.get_sunspot_data(yy2, time2)
+        num_of_ss2, new_ss = tracking_modules.get_sunspot_data(yy2, time2)
 
-        overlap_matrix = SS.make_overlap_matrix_V2(old_SS, new_SS)
-        old_SS, new_SS, master_num_of_ss = SS.assign_numbers(old_SS, new_SS, overlap_matrix, master_num_of_ss)
+        overlap_matrix = tracking_modules.make_overlap_matrix_V2(old_ss, new_ss)
+        old_ss, new_ss, master_num_of_ss = tracking_modules.assign_numbers(old_ss, new_ss, overlap_matrix, master_num_of_ss)
 
         # write out json with updated 'trueid' numbers
         true_id = {}
-        for index in range(len(new_SS)):
-            true_id[str(index)] = int(new_SS[index].number)
+        for index in range(len(new_ss)):
+            true_id[str(index)] = int(new_ss[index].number)
 
         json_data['posprop']['trueid'] = true_id
         with open(output_folder + filename_stem + extensions[0], 'w') as outfile:
             json.dump(json_data, outfile)
 
-        old_SS = deepcopy(new_SS)
+        old_ss = deepcopy(new_ss)
 
         count += 1
         print(count)
