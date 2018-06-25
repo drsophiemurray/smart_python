@@ -14,9 +14,7 @@
     - Visualise output for SolarMonitor.org
 
     TODO:
-    - Merge Sean's tracking code
     - Finish de-projection code in ar_pslprop.py (merge from Sean's work)
-    - Get rid of 'ar_' naming scheme and main function naming a.l.a Higgins version
     - Fix numbers in json files (all those unnecessary significant figures...)
     - Make better way to plot lat/lon grid rather than hacky version
 '''
@@ -42,7 +40,7 @@ import psl_properties
 import plot_detections
 
 
-def main(*fits_file, track=False):
+def main(*fits_file):
     """
 
     :param file:
@@ -103,12 +101,10 @@ def main(*fits_file, track=False):
                   indent=4, separators=(',', ': '))
 
     # Visualise
-    ## Just something simple for my testing
-    ## - to be replaced by proper SolarMonitor stuff eventually...
     plot_detections.main(processedmap, coredetectionmap,  pslmap,
                          data_dir, smartdate)
 
-    # Delete fits files for now for Met Office
+    # Delete fits files
     sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])
     subprocess.call(sys_call, shell=True)
 
