@@ -11,7 +11,10 @@ import datetime
 
 input_folder = '/Users/sophie/data/smart/track_test/'
 json_folder = '/Users/sophie/data/smart/track_test_result/'
-movie_folder = '/Users/sophie/data/smart/track_test_result/'
+movie_folder = '/Users/sophie/data/smart/track_test_images/'
+
+group = 'magprop'
+property = 'totarea'
 
 ###############################################################################
 def main():
@@ -19,10 +22,11 @@ def main():
 
     :return:
     """
+    #TODO: cant handle anything other than json - need to only look for fits files in a specific time range
     filenames = sorted(os.listdir(json_folder))
     filename_dates = [datetime_from_file_string(x) for x in filenames]
 
-    #cuts off last day? dunno whats going on...
+    #TODO: cuts off last day- make start and end times keywords
     start_date, end_date = filename_dates[0],  filename_dates[len(filename_dates)-1] #datetime.datetime(2011, 9, 1, 0, 0, 0, 0), datetime.datetime(2012, 9, 4, 1, 1)
 
     date_strings = []
@@ -39,9 +43,9 @@ def main():
         for key, value in data['posprop']['trueid'].items():
             if str(value) in sunspot_data:
                 sunspot_data[str(value)][0].append(date_string[1])
-                sunspot_data[str(value)][1].append(data['magprop']['totarea'][str(key)])
+                sunspot_data[str(value)][1].append(data[group][property][str(key)])
             else:
-                sunspot_data[str(value)] = [[date_string[1]], [data['magprop']['totarea'][str(key)]]]
+                sunspot_data[str(value)] = [[date_string[1]], [data[group][property][str(key)]]]
 
 
     #----------------------------------------
@@ -53,37 +57,39 @@ def main():
     count = 1
     for date_string in date_strings:
         filename = input_folder + date_string[0] + "_detections.fits"
-        yy1 = sunpy.map.Map(filename).data
+        detections = sunpy.map.Map(filename)
 
         # get outlines of sunspot detections
-        outline_edges = np.zeros((1024, 1024))
-        num_of_ss = np.max(yy1.flatten())
+#        outline_edges = np.zeros(yy1.shape)
+#        num_of_ss = np.max(yy1.flatten())
 
-        for i in np.arange(1, num_of_ss + 1):
-            yy_copy = np.copy(yy1)
+#        for i in np.arange(1, num_of_ss + 1):
+#            yy_copy = np.copy(yy1)
 
-            mask = yy_copy==i
-            yy_copy[~mask] = 0
+#            mask = yy_copy==i
+#            yy_copy[~mask] = 0
 
             # rank 2 structure with full connectivity
-            struct = ndimage.generate_binary_structure(2, 2)
-            erode = ndimage.binary_erosion(mask, struct)
-            edges = mask ^ erode
+#            struct = ndimage.generate_binary_structure(2, 2)
+#            erode = ndimage.binary_erosion(mask, struct)
+#            edges = mask ^ erode
 
-            outline_edges += edges
-        outline_edges = np.ma.masked_where(outline_edges == 0, outline_edges)
+#            outline_edges += edges
+#        outline_edges = np.ma.masked_where(outline_edges == 0, outline_edges)
 
         #----------------------------------------
         # get actual image of sun
         filename = input_folder + date_string[0] + "_map.fits"
-        yy2 = sunpy.map.Map(filename).data
+        magnetogram = sunpy.map.Map(filename)
 
         #----------------------------------------
         # read in numbers and centroids from json
         # read in json
         json_data = json.load(open(json_folder + date_string[0] + "_properties.json"))
-        time2 = datetime_from_json(json_data)
+#        time2 = datetime_from_json(json_data)
+        # current numbering in file
         number_json = list(json_data['posprop']['trueid'].keys())
+        # the real values in the data
         number_json_values = [json_data['posprop']['trueid'][i] for i in number_json]
 
 
@@ -96,14 +102,17 @@ def main():
         # plotting shite
 
         ax1 = plt.subplot2grid((5, 4), (0, 0), colspan = 4, rowspan = 3)
-        im1 = plt.imshow(yy2)
-        im2 = plt.imshow(outline_edges, cmap = "Greys", interpolation = "nearest")
+        im1 = magnetogram.plot(vmin=-1000., vmax=1000.)
+        im2 = plt.contour(detections.data, origin='lower',
+                          colors='blue', linewidths=1.0)
 
-        plt.plot(json_centx, json_centy, 'or')
+        #these need to be different colours
+        plt.plot(json_centx, json_centy, 'or',
+                 color='blue', markersize=2)
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
-            plt.text(x, y, str(numb), fontsize = 24, color = "red")
+            plt.text(x, y, str(numb), fontsize = 14)
 
-        plt.title(date_string[0], fontsize = 24)
+        plt.title(date_string[0], fontsize = 14)
 
         ax2 = plt.subplot2grid((5, 4), (3, 0), colspan = 4, rowspan = 2)
 
