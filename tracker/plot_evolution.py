@@ -134,6 +134,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
             ax1.plot(value[0], value[1],
                      color=next(colors), label=key)
             plt.legend(loc='lower right', bbox_to_anchor=(1.0,-2.0))
+            plt.xticks([])
             #plt.gcf().autofmt_xdate()
 
         plt.axvline(date_string[1],
