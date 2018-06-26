@@ -119,7 +119,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
         #----------------------------------------
         # plotting shite
-        colors = itertools.cycle(["black",
+        colors = itertools.cycle(["black", "grey",
                                   "green", "turquoise",
                                   "blue", "purple",
                                   "red", "orange"])
@@ -134,6 +134,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
             ax1.plot(value[0], value[1],
                      color=next(colors), label=key)
             plt.legend(loc='lower right', bbox_to_anchor=(1.0,-2.0))
+            #plt.gcf().autofmt_xdate()
 
         plt.axvline(date_string[1],
                     linestyle = "dashed", color = "black")
@@ -157,7 +158,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                      color='yellow')
 
         count += 1
-        plt.savefig(output_folder + str(count) + ".png",
+        plt.savefig(output_folder + date_string[0] + "_tracking.png",
                     dpi = 100, figsize = (80, 40))
         plt.clf()
     
