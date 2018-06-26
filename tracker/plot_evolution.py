@@ -62,18 +62,25 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         if start_date <= value <= end_date:
             date_strings.append([filenames_json[index][:13], value]) #todo get rid of hardcoded 13
 
+
     # get properties (time and value for each id)
-    sunspot_data = {}
+    property_values = {}
+    x_position, y_position = {}, {}
     for date_string in date_strings:
         json_filename = input_folder + date_string[0] + "_properties.json"
-        data = json.load(open(json_filename))
-
-        for key, value in data['posprop']['trueid'].items():
-            if str(value) in sunspot_data:
-                sunspot_data[str(value)][0].append(date_string[1])
-                sunspot_data[str(value)][1].append(data[group][property][str(key)])
+        json_data = json.load(open(json_filename))
+        for key, value in json_data['posprop']['trueid'].items():
+            if str(value) in property_values:
+                property_values[str(value)][0].append(date_string[1])
+                property_values[str(value)][1].append(json_data[group][property][str(key)])
             else:
-                sunspot_data[str(value)] = [[date_string[1]], [data[group][property][str(key)]]]
+                property_values[str(value)] = [[date_string[1]], [json_data[group][property][str(key)]]]
+            if str(value) in x_position:
+                x_position[str(value)].append(json_data['posprop']['xcenarea'][str(key)])
+                y_position[str(value)].append(json_data['posprop']['ycenarea'][str(key)])
+            else:
+                x_position[str(value)] = [json_data['posprop']['xcenarea'][str(key)]]
+                y_position[str(value)] = [json_data['posprop']['ycenarea'][str(key)]]
 
     #----------------------------------------
     # get detection outlines as outline_edges
@@ -93,13 +100,11 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
         #----------------------------------------
         # read in numbers and centroids from json
-        # read in json
         json_data = json.load(open(input_folder + date_string[0] + "_properties.json"))
-        # current numbering in file
+        # smart id
         number_json = list(json_data['posprop']['trueid'].keys())
-        # the real values in the data
+        # the tracked ids in the data
         number_json_values = [json_data['posprop']['trueid'][i] for i in number_json]
-
 
         json_centx, json_centy = [], []
         for i in number_json:
@@ -116,7 +121,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         #evolution
         ax1 = plt.subplot(gs1[0])
 
-        for key, value in sunspot_data.items():
+        for key, value in property_values.items():
             ax1.plot(value[0], value[1])
 
         plt.axvline(date_string[1], lw = 2, linestyle = "dashed", color = "black")
