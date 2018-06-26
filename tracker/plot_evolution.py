@@ -1,3 +1,24 @@
+'''
+    Solar Monitor Active Region Tracker Visualation
+    ===============================================
+    Written by Sean Blake, with help from Tadhg Garton.
+    Code later integrated into smart_python Github repository by Sophie Murray
+
+    Makes some evolution plots of the tracked regions (images and 2D)
+
+    Last tested under:
+    - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
+    - Sunpy 0.9.0
+
+    Steps:
+    - Load .json file with true ids, and detections and maps
+    - Plot images
+    - Plot properties over time
+
+    TODO:
+    - All the things
+'''
+
 import sunpy.map
 import os
 from matplotlib import pyplot as plt
@@ -6,24 +27,27 @@ from scipy import ndimage
 import json
 import datetime
 
-################################################################################
-################################################################################
-
-input_folder = '/Users/sophie/data/smart/track_test/'
-json_folder = '/Users/sophie/data/smart/track_test_result/'
-movie_folder = '/Users/sophie/data/smart/track_test_images/'
-
-group = 'magprop'
-property = 'totarea'
-
-###############################################################################
-def main():
+def main(input_folder='/Users/sophie/data/smart/track_test/',
+         group='magprop', property='totarea',
+         *smart_folder, *output_folder):
     """
+    Parameters
+    ----------
+    input_folder : Folder string location of .json files with true_id's
+    group : Indicate what group in .json file the property you wish to plot is, e.g. 'magprop'
+    property : Indicate what property you wish to plot, e.g. 'totarea'
+    smart_folder : Optional folder location to load maps and detections from if not in same folder as json
+    output_folder: Optional output folder location of images created with algorithm
 
-    :return:
+    Returns
+    -------
     """
+    if not map_folder:
+        smart_folder = input_folder
+    if not output_folder:
+        output_folder = input_folder
     #TODO: cant handle anything other than json - need to only look for fits files in a specific time range
-    filenames = sorted(os.listdir(json_folder))
+    filenames = sorted(os.listdir(input_folder))
     filename_dates = [datetime_from_file_string(x) for x in filenames]
 
     #TODO: cuts off last day- make start and end times keywords
@@ -37,7 +61,7 @@ def main():
     # get properties
     sunspot_data = {}
     for date_string in date_strings:
-        json_filename = json_folder + date_string[0] + "_properties.json"
+        json_filename = input_folder + date_string[0] + "_properties.json"
         data = json.load(open(json_filename))
 
         for key, value in data['posprop']['trueid'].items():
@@ -56,7 +80,7 @@ def main():
 
     count = 1
     for date_string in date_strings:
-        filename = input_folder + date_string[0] + "_detections.fits"
+        filename = smart_folder + date_string[0] + "_detections.fits"
         detections = sunpy.map.Map(filename)
 
         # get outlines of sunspot detections
@@ -79,14 +103,13 @@ def main():
 
         #----------------------------------------
         # get actual image of sun
-        filename = input_folder + date_string[0] + "_map.fits"
+        filename = smart_folder + date_string[0] + "_map.fits"
         magnetogram = sunpy.map.Map(filename)
 
         #----------------------------------------
         # read in numbers and centroids from json
         # read in json
-        json_data = json.load(open(json_folder + date_string[0] + "_properties.json"))
-#        time2 = datetime_from_json(json_data)
+        json_data = json.load(open(input_folder + date_string[0] + "_properties.json"))
         # current numbering in file
         number_json = list(json_data['posprop']['trueid'].keys())
         # the real values in the data
@@ -122,7 +145,7 @@ def main():
         plt.axvline(date_string[1], lw = 3, linestyle = "dashed", color = "black")
 
         count += 1
-        plt.savefig(movie_folder + str(count) + ".png", dpi = 100, figsize = (80, 40))
+        plt.savefig(output_folder + str(count) + ".png", dpi = 100, figsize = (80, 40))
         plt.clf()
     
     # aborted attempts to get the above to animate
@@ -130,17 +153,6 @@ def main():
     #ani.save('sdo_aia.mp4', writer='ffmpeg')
 
 
-
-def datetime_from_json(data):
-    """convert timestring to datetime object
-    """
-    a = data['meta']['dateobs']
-    year = int(a[:4])
-    month = int(a[4:6])
-    day = int(a[6:8])
-    hour = int(a[9:11])
-    time1 = datetime.datetime(year, month, day, hour)
-    return time1
 
 def datetime_from_file_string(a):
     """convert timestring to datetime object
