@@ -27,10 +27,12 @@ from matplotlib import pyplot as plt
 #from scipy import ndimage
 import json
 import datetime
+import matplotlib.gridspec as gridspec
+
 
 def main(input_folder='/Users/sophie/data/smart/track_test/',
          group='magprop', property='totarea',
-         *smart_folder, *output_folder):
+         *smart_folder, **output_folder):
     """
     Parameters
     ----------
@@ -43,7 +45,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     Returns
     -------
     """
-    if not map_folder:
+    if not smart_folder:
         smart_folder = input_folder
     if not output_folder:
         output_folder = input_folder
@@ -82,30 +84,12 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     count = 1
     for date_string in date_strings:
         detection_filename = smart_folder + date_string[0] + "_detections.fits"
-        detections = sunpy.map.Map(detection_filename)
-
-        # get outlines of sunspot detections
-#        outline_edges = np.zeros(yy1.shape)
-#        num_of_ss = np.max(yy1.flatten())
-
-#        for i in np.arange(1, num_of_ss + 1):
-#            yy_copy = np.copy(yy1)
-
-#            mask = yy_copy==i
-#            yy_copy[~mask] = 0
-
-            # rank 2 structure with full connectivity
-#            struct = ndimage.generate_binary_structure(2, 2)
-#            erode = ndimage.binary_erosion(mask, struct)
-#            edges = mask ^ erode
-
-#            outline_edges += edges
-#        outline_edges = np.ma.masked_where(outline_edges == 0, outline_edges)
+        detection_map = sunpy.map.Map(detection_filename)
 
         #----------------------------------------
         # get actual image of sun
-        mag_filename = smart_folder + date_string[0] + "_map.fits"
-        mag_map = sunpy.map.Map(mag_filename)
+        magnetogram_filename = smart_folder + date_string[0] + "_map.fits"
+        magnetogram_map = sunpy.map.Map(magnetogram_filename)
 
         #----------------------------------------
         # read in numbers and centroids from json
@@ -125,10 +109,27 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         #----------------------------------------
         # plotting shite
 
-        ax1 = plt.subplot2grid((5, 4), (0, 0), colspan = 4, rowspan = 3)
-        im1 = mag_map.plot(vmin=-1000., vmax=1000.)
-        im2 = plt.contour(detections.data, origin='lower',
-                          colors='blue', linewidths=1.0)
+        gs1 = gridspec.GridSpec(2, 1,
+                                height_ratios=[1, 2],
+                                )
+
+        #evolution
+        ax1 = plt.subplot(gs1[0])
+
+        for key, value in sunspot_data.items():
+            ax1.plot(value[0], value[1])
+
+        plt.axvline(date_string[1], lw = 2, linestyle = "dashed", color = "black")
+        plt.title(date_string[0], fontsize = 12)
+
+        #image
+        ax2 = plt.subplot(gs1[1])
+
+        plt.imshow(magnetogram_map.data,  origin='lower',
+                   vmin=-1000., vmax=1000.,
+                   cmap='Greys')
+        plt.contour(detection_map.data, origin='lower',
+                    colors='blue', linewidths=1.0)
 
         #these need to be different colours
         plt.plot(json_centx, json_centy, 'or',
@@ -136,14 +137,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
             plt.text(x, y, str(numb), fontsize = 14)
 
-        plt.title(date_string[0], fontsize = 14)
 
-        ax2 = plt.subplot2grid((5, 4), (3, 0), colspan = 4, rowspan = 2)
-
-        for key, value in sunspot_data.items():
-            ax2.plot(value[0], value[1])
-
-        plt.axvline(date_string[1], lw = 3, linestyle = "dashed", color = "black")
 
         count += 1
         plt.savefig(output_folder + str(count) + ".png", dpi = 100, figsize = (80, 40))
