@@ -1,3 +1,25 @@
+'''
+    Solar Monitor Active Region Tracker
+    ===================================
+    Written by Sean Blake, with help from Tadhg Garton.
+    Code later integrated into smart_python Github repository by Sophie Murray
+
+    Note this is NOT the same as the YAFTA code used by the IDL version!
+
+    Last tested under:
+    - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
+    - Sunpy 0.9.0
+
+    Steps:
+    - Load in SMART detections
+    - Run tracking algorithm to match detections
+    - Output 'true id' of the detections in the 'posprop' group of the .json file
+
+    TODO:
+    - Tidy
+'''
+
+
 import json
 import datetime
 import os
@@ -5,21 +27,29 @@ import sunpy.map
 from copy import deepcopy
 import tracking_modules
 
-###############################################################################
-################################################################################
 
-input_folder = '/Users/sophie/data/smart/track_test/'
-output_folder = '/Users/sophie/data/smart/track_test_result/'
-
-###############################################################################
-
-def main():
+def main(input_folder='/Users/sophie/data/smart/track_test/',
+         *output_folder):
     """
+    Tracking routine as part of Solar Monitor Active Region Tracker.
 
-    :return:
+    Parameters
+    ----------
+
+    input_folder : string
+        Location of SMART fits files
+    *output_folder : string
+        Location of resulting JSON files. Otherwise input_folder json files will be overwritten.
+
+    Returns
+    -------
+
     """
     # first image
     # read in json
+    if not output_folder:
+        output_folder = input_folder
+
     filenames = sorted(os.listdir(input_folder))
     filename_stems = [x[:14] for x in filenames if "_detections.fits" in x]
     extensions = ["properties.json", "detections.fits", "map.fits"]
@@ -38,9 +68,9 @@ def main():
 
     json_data['posprop']['trueid'] = true_id
     with open(output_folder + filename_stems[0] + extensions[0], 'w') as outfile:
-        json.dump(json_data, outfile)
+        json.dump(json_data, outfile,
+                  indent=4, separators=(',', ': '))
 
-    ###############################################################################
     # now for the rest of the images
     count = 0
     for filename_stem in filename_stems[1:]:
@@ -62,7 +92,8 @@ def main():
 
         json_data['posprop']['trueid'] = true_id
         with open(output_folder + filename_stem + extensions[0], 'w') as outfile:
-            json.dump(json_data, outfile)
+            json.dump(json_data, outfile,
+                      indent=4, separators=(',', ': '))
 
         old_ss = deepcopy(new_ss)
 
@@ -71,16 +102,25 @@ def main():
 
 
 def datetime_from_json(data):
-    """convert timestring to datetime object
+    """
+    Convert timestring to datetime object
+
+    Parameters
+    ----------
+    data : input time string in SMART format (yyyymmdd_HHMM)
+
+    Returns
+    -------
+    time_object : datetime object
+
     """
     a = data['meta']['dateobs']
     year = int(a[:4])
     month = int(a[4:6])
     day = int(a[6:8])
     hour = int(a[9:11])
-    time1 = datetime.datetime(year, month, day, hour)
-    return time1
-
+    time_object = datetime.datetime(year, month, day, hour)
+    return time_object
 
 
 if __name__ == '__main__':
