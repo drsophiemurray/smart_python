@@ -23,11 +23,10 @@
 import sunpy.map
 import os
 from matplotlib import pyplot as plt
-#import numpy as np
-#from scipy import ndimage
 import json
 import datetime
 import matplotlib.gridspec as gridspec
+import itertools
 
 
 def main(input_folder='/Users/sophie/data/smart/track_test/',
@@ -113,6 +112,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
         #----------------------------------------
         # plotting shite
+        colors = itertools.cycle(["black", "green", "turquoise", "blue", "purple", "orange", "yellow"])
 
         gs1 = gridspec.GridSpec(2, 1,
                                 height_ratios=[1, 2],
@@ -122,7 +122,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         ax1 = plt.subplot(gs1[0])
 
         for key, value in property_values.items():
-            ax1.plot(value[0], value[1])
+            ax1.plot(value[0], value[1], color=next(colors), label=key)
+            plt.legend()
 
         plt.axvline(date_string[1], lw = 2, linestyle = "dashed", color = "black")
         plt.title(date_string[0], fontsize = 12)
@@ -134,15 +135,14 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                    vmin=-1000., vmax=1000.,
                    cmap='Greys')
         plt.contour(detection_map.data, origin='lower',
-                    colors='blue', linewidths=1.0)
+                    colors='red', linewidths=1.0)
 
         #these need to be different colours
         plt.plot(json_centx, json_centy, 'or',
-                 color='blue', markersize=2)
+                 color='red', markersize=2)
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
-            plt.text(x, y, str(numb), fontsize = 14)
-
-
+            plt.text(x+5, y+5, str(numb),
+                     color='red', fontsize = 16)
 
         count += 1
         plt.savefig(output_folder + str(count) + ".png", dpi = 100, figsize = (80, 40))
