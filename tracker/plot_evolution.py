@@ -18,6 +18,8 @@
 
     TODO:
     - Sort out the reading in of files - repetitive and uses hardcoded numbers.
+    - Naming scheme, one giant function.
+    - Plot colours for the numbers.
 '''
 
 import sunpy.map
@@ -27,6 +29,11 @@ import json
 import datetime
 import matplotlib.gridspec as gridspec
 import itertools
+import matplotlib as mpl
+
+mpl.rc('font', size = 10, family = 'serif', weight='normal')
+mpl.rc('legend', fontsize = 8)
+mpl.rc('lines', linewidth = 1.5)
 
 
 def main(input_folder='/Users/sophie/data/smart/track_test/',
@@ -112,40 +119,46 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
         #----------------------------------------
         # plotting shite
-        colors = itertools.cycle(["black", "green", "turquoise", "blue", "purple", "orange", "yellow"])
+        colors = itertools.cycle(["black",
+                                  "green", "turquoise",
+                                  "blue", "purple",
+                                  "red", "orange"])
 
         gs1 = gridspec.GridSpec(2, 1,
-                                height_ratios=[1, 2],
-                                )
+                                height_ratios=[1, 2])
 
-        #evolution
+        # evolution
         ax1 = plt.subplot(gs1[0])
 
         for key, value in property_values.items():
-            ax1.plot(value[0], value[1], color=next(colors), label=key)
-            plt.legend()
+            ax1.plot(value[0], value[1],
+                     color=next(colors), label=key)
+            plt.legend(loc='lower right', bbox_to_anchor=(1.0,-2.0))
 
-        plt.axvline(date_string[1], lw = 2, linestyle = "dashed", color = "black")
-        plt.title(date_string[0], fontsize = 12)
+        plt.axvline(date_string[1],
+                    linestyle = "dashed", color = "black")
+        plt.title(date_string[0],
+                  fontsize = 10)
 
-        #image
+        # image
         ax2 = plt.subplot(gs1[1])
 
         plt.imshow(magnetogram_map.data,  origin='lower',
                    vmin=-1000., vmax=1000.,
                    cmap='Greys')
         plt.contour(detection_map.data, origin='lower',
-                    colors='red', linewidths=1.0)
+                    colors='black', linewidths=1)
 
-        #these need to be different colours
+        # numbers
         plt.plot(json_centx, json_centy, 'or',
-                 color='red', markersize=2)
+                 color='yellow', markersize=2)
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
-            plt.text(x+5, y+5, str(numb),
-                     color='red', fontsize = 16)
+            plt.text(x+10, y+10, str(numb),
+                     color='yellow')
 
         count += 1
-        plt.savefig(output_folder + str(count) + ".png", dpi = 100, figsize = (80, 40))
+        plt.savefig(output_folder + str(count) + ".png",
+                    dpi = 100, figsize = (80, 40))
         plt.clf()
     
     # aborted attempts to get the above to animate
