@@ -69,7 +69,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     json_data['posprop']['trueid'] = true_id
     with open(output_folder + filename_stems[0] + extensions[0], 'w') as outfile:
         json.dump(json_data, outfile,
-                  indent=4, separators=(',', ': '))
+                  indent=4, separators=(', ', ': '))
 
     # now for the rest of the images
     count = 0
@@ -93,7 +93,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         json_data['posprop']['trueid'] = true_id
         with open(output_folder + filename_stem + extensions[0], 'w') as outfile:
             json.dump(json_data, outfile,
-                      indent=4, separators=(',', ': '))
+                      indent=4, separators=(', ', ': '))
 
         old_ss = deepcopy(new_ss)
 
