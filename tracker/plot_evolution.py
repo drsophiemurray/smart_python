@@ -4,7 +4,8 @@
     Written by Sean Blake, with help from Tadhg Garton.
     Code later integrated into smart_python Github repository by Sophie Murray
 
-    Makes some evolution plots of the tracked regions (images and 2D)
+    Provide a folder location that contains all the files you want to run, and a property you want to plot.
+    The code will then make some evolution plots of the tracked regions (images and 2D).
 
     Last tested under:
     - Python 3.6.1 |Anaconda custom (x86_64)| (default, May 11 2017, 13:04:09)
@@ -16,14 +17,14 @@
     - Plot properties over time
 
     TODO:
-    - All the things
+    - Sort out the reading in of files - repetitive and uses hardcoded numbers.
 '''
 
 import sunpy.map
 import os
 from matplotlib import pyplot as plt
-import numpy as np
-from scipy import ndimage
+#import numpy as np
+#from scipy import ndimage
 import json
 import datetime
 
@@ -46,19 +47,20 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         smart_folder = input_folder
     if not output_folder:
         output_folder = input_folder
-    #TODO: cant handle anything other than json - need to only look for fits files in a specific time range
-    filenames = sorted(os.listdir(input_folder))
-    filename_dates = [datetime_from_file_string(x) for x in filenames]
 
-    #TODO: cuts off last day- make start and end times keywords
-    start_date, end_date = filename_dates[0],  filename_dates[len(filename_dates)-1] #datetime.datetime(2011, 9, 1, 0, 0, 0, 0), datetime.datetime(2012, 9, 4, 1, 1)
+    # load json files
+    filenames = sorted(os.listdir(input_folder))
+    filenames_json = [x for x in filenames if ".json" in x]
+
+    filename_dates = [datetime_from_file_string(x) for x in filenames_json]
+    start_date, end_date = filename_dates[0],  filename_dates[len(filename_dates)-1]
 
     date_strings = []
     for index, value in enumerate(filename_dates):
-        if start_date < value < end_date:
-            date_strings.append([filenames[index][:13], value])
+        if start_date <= value <= end_date:
+            date_strings.append([filenames_json[index][:13], value]) #todo get rid of hardcoded 13
 
-    # get properties
+    # get properties (time and value for each id)
     sunspot_data = {}
     for date_string in date_strings:
         json_filename = input_folder + date_string[0] + "_properties.json"
@@ -71,7 +73,6 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
             else:
                 sunspot_data[str(value)] = [[date_string[1]], [data[group][property][str(key)]]]
 
-
     #----------------------------------------
     # get detection outlines as outline_edges
 
@@ -80,8 +81,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
     count = 1
     for date_string in date_strings:
-        filename = smart_folder + date_string[0] + "_detections.fits"
-        detections = sunpy.map.Map(filename)
+        detection_filename = smart_folder + date_string[0] + "_detections.fits"
+        detections = sunpy.map.Map(detection_filename)
 
         # get outlines of sunspot detections
 #        outline_edges = np.zeros(yy1.shape)
@@ -103,8 +104,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
         #----------------------------------------
         # get actual image of sun
-        filename = smart_folder + date_string[0] + "_map.fits"
-        magnetogram = sunpy.map.Map(filename)
+        mag_filename = smart_folder + date_string[0] + "_map.fits"
+        mag_map = sunpy.map.Map(mag_filename)
 
         #----------------------------------------
         # read in numbers and centroids from json
@@ -125,7 +126,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         # plotting shite
 
         ax1 = plt.subplot2grid((5, 4), (0, 0), colspan = 4, rowspan = 3)
-        im1 = magnetogram.plot(vmin=-1000., vmax=1000.)
+        im1 = mag_map.plot(vmin=-1000., vmax=1000.)
         im2 = plt.contour(detections.data, origin='lower',
                           colors='blue', linewidths=1.0)
 
