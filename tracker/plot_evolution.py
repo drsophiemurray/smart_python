@@ -30,6 +30,10 @@ import datetime
 import matplotlib.gridspec as gridspec
 import itertools
 import matplotlib as mpl
+from astropy.coordinates import SkyCoord
+import astropy.units as u
+from sunpy.visualization import wcsaxes_compat
+
 
 mpl.rc('font', size = 10, family = 'serif', weight='normal')
 mpl.rc('legend', fontsize = 8)
@@ -140,13 +144,47 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                     dpi=150)
         plt.close()
 
-        # plot detections on magnetogram
+#        # plot detections on magnetogram
+#        plt.figure()
+#        plt.imshow(magnetogram_map.data,  origin='lower',
+#                   vmin=-1000., vmax=1000.,
+#                   cmap='Greys')
+#        plt.contour(detection_map.data, origin='lower',
+#                    colors='blue', linewidths=1)
+#
+#        # add numbers
+#        plt.plot(json_centx, json_centy, 'or',
+#                 color='yellow', markersize=2.0)
+#        for x, y, numb in zip(json_centx, json_centy, number_json_values):
+#            plt.text(x+10, y+10, str(numb),
+#                     color='yellow')
+#        plt.title(date_string[0])
+#
+#        count += 1
+#        plt.savefig(output_folder + date_string[0] + "_tracking_image.png",
+#                    dpi=150)
+#        plt.close()
+
+        # plot detections on sunpy map of magnetogram
         plt.figure()
-        plt.imshow(magnetogram_map.data,  origin='lower',
-                   vmin=-1000., vmax=1000.,
-                   cmap='Greys')
+
+        # Get same axes
+        bottom_left = SkyCoord(-1000 * u.arcsec, -1000 * u.arcsec,
+                               frame=magnetogram_map.coordinate_frame)
+        top_right = SkyCoord(1000 * u.arcsec, 1000 * u.arcsec,
+                             frame=magnetogram_map.coordinate_frame)
+        submap = magnetogram_map.submap(bottom_left, top_right)
+        axes = wcsaxes_compat.gca_wcs(magnetogram_map.wcs)
+
+        image = magnetogram_map.plot(vmin=-500, vmax=500, axes=axes)
+
+        # Draw solar lat/lon grid
+        axes.coords.grid(False)
+        overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
+        plt.colorbar(label='B [G]')
+
         plt.contour(detection_map.data, origin='lower',
-                    colors='blue', linewidths=1)
+                    colors='lightblue', linewidths=0.5)
 
         # add numbers
         plt.plot(json_centx, json_centy, 'or',
@@ -156,11 +194,11 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                      color='yellow')
         plt.title(date_string[0])
 
-        count += 1
-        plt.savefig(output_folder + date_string[0] + "_tracking_image.png",
+        plt.savefig(output_folder + date_string[0] + "_tracking_map.png",
                     dpi=150)
         plt.close()
-    
+
+
     # aborted attempts to get the above to animate
     #ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=1000)
     #ani.save('sdo_aia.mp4', writer='ffmpeg')
@@ -175,6 +213,39 @@ def datetime_from_file_string(a):
     hour = int(a[9:11])
     time1 = datetime.datetime(year, month, day, hour)
     return time1
+
+def grid_overlay(axes, grid_spacing):
+    """
+    Create a heliographic overlay using wcsaxes.
+    Also draw a grid and label the top axes.
+
+    Parameters
+    ----------
+    axes : `~matplotlib.axes._subplots.WCSAxesSubplot` object.
+        The `~astropy.visualization.wcsaxes.WCSAxes` object to create the HGS overlay on.
+
+    grid_spacing: `~astropy.units.Quantity`
+        Spacing for longitude and latitude grid in degrees.
+
+    Returns
+    -------
+    overlay : `~astropy.visualization.wcsaxes.WCSAxes` overlay
+        The overlay object.
+
+    """
+    lon_space = lat_space = grid_spacing
+    overlay = axes.get_coords_overlay('heliographic_stonyhurst')
+    lon = overlay[0]
+    lat = overlay[1]
+    lon.coord_wrap = 180
+    lon.set_major_formatter('dd')
+    lon.set_ticks_position('tr')
+    lat.set_ticks_position('tr')
+    grid_kw = {'color': 'white', 'zorder': 100, 'alpha': 0.5}#, linestyle: 'dashed', linewidth: 0.1}
+    lon.set_ticks(spacing=lon_space, color=grid_kw['color'])
+    lat.set_ticks(spacing=lat_space, color=grid_kw['color'])
+    overlay.grid(**grid_kw, linestyle='dashed', linewidth=0.1)
+    return overlay
 
 if __name__ == '__main__':
     main()
