@@ -27,12 +27,12 @@ import os
 from matplotlib import pyplot as plt
 import json
 import datetime
-import matplotlib.gridspec as gridspec
 import itertools
 import matplotlib as mpl
 from astropy.coordinates import SkyCoord
 import astropy.units as u
 from sunpy.visualization import wcsaxes_compat
+import imageio
 
 
 mpl.rc('font', size = 10, family = 'serif', weight='normal')
@@ -173,9 +173,19 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         plt.title(date_string[0])
 
         plt.savefig(output_folder + date_string[0] + "_tracking.png",
-                    dpi=200)
+                    dpi=100)
         plt.close()
 
+    # convert to gif
+    images = []
+    filenames = sorted(os.listdir(input_folder))
+    filenames_images = [x for x in filenames if "_tracking.png" in x]
+    filenames_images = [input_folder + x for x in filenames_images]
+    for filename in filenames_images:
+        images.append(imageio.imread(filename))
+    imageio.mimsave(input_folder+'SMART_evolution.gif',
+                    images,
+                    fps=1.)
 
 def datetime_from_file_string(a):
     """convert timestring to datetime object
