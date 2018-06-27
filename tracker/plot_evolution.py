@@ -172,8 +172,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                      color='yellow')
         plt.title(date_string[0])
 
-        plt.savefig(output_folder + date_string[0] + "_tracking_all.png",
-                    dpi=150)
+        plt.savefig(output_folder + date_string[0] + "_tracking.png",
+                    dpi=200)
         plt.close()
 
 
