@@ -91,9 +91,6 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     #----------------------------------------
     # get detection outlines as outline_edges
 
-    ims = []
-    fig = plt.figure(1)
-
     count = 1
     for date_string in date_strings:
         detection_filename = smart_folder + date_string[0] + "_detections.fits"
@@ -118,57 +115,55 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
             json_centy.append(json_data['posprop']['ycenarea'][i])
 
         #----------------------------------------
-        # plotting shite
+        # plot evolution of property
+
         colors = itertools.cycle(["black", "grey",
-                                  "green", "turquoise",
-                                  "blue", "purple",
-                                  "red", "orange"])
+                                  "brown", "orange",
+                                  "red", "pink",
+                                  "purple", "blue",
+                                  "turquoise", "green"])
 
-        gs1 = gridspec.GridSpec(2, 1,
-                                height_ratios=[1, 2])
-
-        # evolution
-        ax1 = plt.subplot(gs1[0])
+        plt.figure()
 
         for key, value in property_values.items():
-            ax1.plot(value[0], value[1],
-                     color=next(colors), label=key)
-            plt.legend(loc='lower right', bbox_to_anchor=(1.0,-2.0))
-            plt.xticks([])
-            #plt.gcf().autofmt_xdate()
+            plt.plot(value[0], value[1],
+                     label=key,
+                     marker= 'o', markersize=3.0)
+            plt.legend(loc='upper left')
 
+        plt.gcf().autofmt_xdate()
         plt.axvline(date_string[1],
                     linestyle = "dashed", color = "black")
-        plt.title(date_string[0],
-                  fontsize = 10)
+        plt.title(date_string[0])
 
-        # image
-        ax2 = plt.subplot(gs1[1])
+        plt.savefig(output_folder + date_string[0] + "_tracking_evolution.png",
+                    dpi=150)
+        plt.close()
 
+        # plot detections on magnetogram
+        plt.figure()
         plt.imshow(magnetogram_map.data,  origin='lower',
                    vmin=-1000., vmax=1000.,
                    cmap='Greys')
         plt.contour(detection_map.data, origin='lower',
-                    colors='black', linewidths=1)
+                    colors='blue', linewidths=1)
 
-        # numbers
+        # add numbers
         plt.plot(json_centx, json_centy, 'or',
-                 color='yellow', markersize=2)
+                 color='yellow', markersize=2.0)
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
             plt.text(x+10, y+10, str(numb),
                      color='yellow')
-            plt.xticks([])
-            plt.yticks([])
+        plt.title(date_string[0])
 
         count += 1
-        plt.savefig(output_folder + date_string[0] + "_tracking.png",
-                    dpi = 100, figsize = (80, 40))
-        plt.clf()
+        plt.savefig(output_folder + date_string[0] + "_tracking_image.png",
+                    dpi=150)
+        plt.close()
     
     # aborted attempts to get the above to animate
     #ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=1000)
     #ani.save('sdo_aia.mp4', writer='ffmpeg')
-
 
 
 def datetime_from_file_string(a):
