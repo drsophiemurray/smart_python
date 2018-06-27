@@ -135,11 +135,14 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                      marker= 'o', markersize=3.0)
             plt.legend(loc='upper left')
 
+        import matplotlib.dates as mdates
+        ax1.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m-%d %H'))
         plt.gcf().autofmt_xdate()
+        plt.xlabel('Date and time [UT]')
+
         plt.axvline(date_string[1],
                     linestyle = "dashed", color = "black")
-        plt.ylabel('Total Area [m.s.h]') #todo should be meta data
-        plt.xlabel('Date (YYYY-MM-DD HH)') #todo should be meta data
+        plt.ylabel('Total area [m.s.h]') #todo should be meta data
 
         # plot detections on sunpy map of magnetogram
         ax1 = fig.add_subplot(2, 1, 1, projection=magnetogram_map)
@@ -170,7 +173,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
             plt.text(x+10, y+10, str(numb),
                      color='yellow')
-        plt.title(date_string[0])
+        plt.title(date_string[1].strftime('%Y %B %d %H:%M'))
 
         plt.savefig(output_folder + date_string[0] + "_tracking.png",
                     dpi=150)
@@ -183,7 +186,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     filenames_images = [input_folder + x for x in filenames_images]
     for filename in filenames_images:
         images.append(imageio.imread(filename))
-    imageio.mimsave(input_folder+'SMART_evolution.gif',
+    imageio.mimwrite(input_folder+'SMART_evolution.gif',
                     images,
                     fps=1.)
 
