@@ -17,6 +17,7 @@
     - Finish de-projection code in ar_pslprop.py (merge from Sean's work)
     - Fix numbers in json files (all those unnecessary significant figures...)
     - Make better way to plot lat/lon grid rather than hacky version
+    - Add meta data to the properties so you know what they are
 '''
 
 

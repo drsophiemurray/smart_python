@@ -157,6 +157,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         for x, y, numb in zip(json_centx, json_centy, number_json_values):
             plt.text(x+10, y+10, str(numb),
                      color='yellow')
+            plt.xticks([])
+            plt.yticks([])
 
         count += 1
         plt.savefig(output_folder + date_string[0] + "_tracking.png",
