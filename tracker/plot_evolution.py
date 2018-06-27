@@ -139,7 +139,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         plt.axvline(date_string[1],
                     linestyle = "dashed", color = "black")
         plt.ylabel('Total Area [m.s.h]') #todo should be meta data
-#        plt.xlabel('Date time') #todo should be meta data
+        plt.xlabel('Date (YYYY-MM-DD HH)') #todo should be meta data
 
         # plot detections on sunpy map of magnetogram
         ax1 = fig.add_subplot(2, 1, 1, projection=magnetogram_map)
@@ -173,7 +173,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         plt.title(date_string[0])
 
         plt.savefig(output_folder + date_string[0] + "_tracking.png",
-                    dpi=100)
+                    dpi=150)
         plt.close()
 
     # convert to gif
