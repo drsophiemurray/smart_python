@@ -120,6 +120,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
 
         #----------------------------------------
         # plot evolution of property
+        fig = plt.figure(figsize=(10, 12))
+        ax1 = fig.add_subplot(2, 1, 2)
 
         colors = itertools.cycle(["black", "grey",
                                   "brown", "orange",
@@ -127,10 +129,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                                   "purple", "blue",
                                   "turquoise", "green"])
 
-        plt.figure()
-
         for key, value in property_values.items():
-            plt.plot(value[0], value[1],
+            ax1.plot(value[0], value[1],
                      label=key,
                      marker= 'o', markersize=3.0)
             plt.legend(loc='upper left')
@@ -138,35 +138,13 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         plt.gcf().autofmt_xdate()
         plt.axvline(date_string[1],
                     linestyle = "dashed", color = "black")
-        plt.title(date_string[0])
-
-        plt.savefig(output_folder + date_string[0] + "_tracking_evolution.png",
-                    dpi=150)
-        plt.close()
-
-#        # plot detections on magnetogram
-#        plt.figure()
-#        plt.imshow(magnetogram_map.data,  origin='lower',
-#                   vmin=-1000., vmax=1000.,
-#                   cmap='Greys')
-#        plt.contour(detection_map.data, origin='lower',
-#                    colors='blue', linewidths=1)
-#
-#        # add numbers
-#        plt.plot(json_centx, json_centy, 'or',
-#                 color='yellow', markersize=2.0)
-#        for x, y, numb in zip(json_centx, json_centy, number_json_values):
-#            plt.text(x+10, y+10, str(numb),
-#                     color='yellow')
-#        plt.title(date_string[0])
-#
-#        count += 1
-#        plt.savefig(output_folder + date_string[0] + "_tracking_image.png",
-#                    dpi=150)
-#        plt.close()
+        plt.ylabel('Total Area [m.s.h]') #todo should be meta data
+#        plt.xlabel('Date time') #todo should be meta data
 
         # plot detections on sunpy map of magnetogram
-        plt.figure()
+        ax1 = fig.add_subplot(2, 1, 1, projection=magnetogram_map)
+        plt.subplots_adjust(left=0.1, bottom=0.1, right=0.95, top=0.95,
+                            wspace=None, hspace=None)
 
         # Get same axes
         bottom_left = SkyCoord(-1000 * u.arcsec, -1000 * u.arcsec,
@@ -181,7 +159,7 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
         # Draw solar lat/lon grid
         axes.coords.grid(False)
         overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
-        plt.colorbar(label='B [G]')
+#        plt.colorbar(label='B [G]')
 
         plt.contour(detection_map.data, origin='lower',
                     colors='lightblue', linewidths=0.5)
@@ -194,14 +172,9 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                      color='yellow')
         plt.title(date_string[0])
 
-        plt.savefig(output_folder + date_string[0] + "_tracking_map.png",
+        plt.savefig(output_folder + date_string[0] + "_tracking_all.png",
                     dpi=150)
         plt.close()
-
-
-    # aborted attempts to get the above to animate
-    #ani = animation.ArtistAnimation(fig, ims, interval=100, blit=True, repeat_delay=1000)
-    #ani.save('sdo_aia.mp4', writer='ffmpeg')
 
 
 def datetime_from_file_string(a):
