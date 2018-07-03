@@ -1,7 +1,9 @@
 '''
     Solar Monitor Active Region Tracker
     ===================================
-    Written by Sean Blake, with help from Tadhg Garton.
+    Author: Sean Blake (blakese@tcd.ie), 2018
+    Thanks to Sophie Murray and Tadhg Garton
+
     Code later integrated into smart_python Github repository by Sophie Murray
 
     Note this is NOT the same as the YAFTA code used by the IDL version!

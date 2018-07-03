@@ -193,7 +193,9 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
                     fps=1.)
 
 def datetime_from_file_string(a):
-    """convert timestring to datetime object
+    """
+    Extracting a datetime object from the SMART json file
+    - convert timestring to datetime object
     """
     year = int(a[:4])
     month = int(a[4:6])
