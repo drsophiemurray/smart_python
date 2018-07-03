@@ -47,6 +47,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     """
     # first image
     # read in json
+#    if not input_folder:
+#        input_folder = os.getcwd() + '/'
     if not output_folder:
         output_folder = input_folder
 

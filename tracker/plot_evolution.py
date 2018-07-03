@@ -55,6 +55,8 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     Returns
     -------
     """
+#    if not input_folder:
+#        input_folder = os.getcwd() + '/'
     if not smart_folder:
         smart_folder = input_folder
     if not output_folder:
