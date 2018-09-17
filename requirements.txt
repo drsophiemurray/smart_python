@@ -5,3 +5,4 @@ astropy==3.0.3
 numpy==1.13.1
 scipy==0.19.1
 sunpy==0.9.0
+opencv==3.4.1
