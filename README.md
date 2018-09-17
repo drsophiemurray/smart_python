@@ -15,6 +15,8 @@ Optional keyword inputs:
 Optional outputs:
 - Save fits files of magnetogram and detections (to be added)
 
+Note that the SMART code can be tailored to whatever user requirements are necessary via the `config.ini` file. Here, a data directory can be defined for where the data files are kept (default is /data/smart/), as well as various thresholds changed for detection purposes.
+
 JSON output
 -----------
 The code will output a JSON file in the format `yyyymmdd_HHMM_properties.json`, which contains property values for all detected SMART regions (blank file if none), including position, magnetic, and polarity separation line information*
