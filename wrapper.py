@@ -106,8 +106,8 @@ def main(*fits_file):
                          data_dir, smartdate)
 
     # Delete fits files
-    sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])
-    subprocess.call(sys_call, shell=True)
+#    sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])
+#    subprocess.call(sys_call, shell=True)
 
     # How long did that take?
     print('Runtime:', round(time.time() - start_time), 'seconds')
