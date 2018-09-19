@@ -73,6 +73,7 @@ External dependencies
     astropy
     matplotlib
     numpy
+    opencv
     pandas
     scikit_image
     scipy
