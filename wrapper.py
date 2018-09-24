@@ -102,8 +102,11 @@ def main(*fits_file):
                   indent=4, separators=(',', ': '))
 
     # Visualise
-    plot_detections.main(processedmap, coredetectionmap,  pslmap,
-                         data_dir, smartdate)
+    if np.max(np.unique(coredetectionmap.data)) > 0:
+        plot_detections.main(processedmap, coredetectionmap, pslmap,
+                             data_dir, smartdate)
+    else:
+        plot_detections.nodetections(processedmap, data_dir, smartdate)
 
     # Delete fits files
 #    sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])

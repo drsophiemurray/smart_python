@@ -87,3 +87,21 @@ def grid_overlay(axes, grid_spacing):
     lat.set_ticks(spacing=lat_space, color=grid_kw['color'])
     overlay.grid(**grid_kw, linestyle='dashed', linewidth=0.1)
     return overlay
+
+def nodetections(processedmap, data_dir, smartdate):
+    """If there are no detections,
+    just plot a blank magnetogram"""
+    figure = plt.figure()
+    # Get same axes
+    bottom_left = SkyCoord(-1000*u.arcsec, -1000*u.arcsec,
+                           frame = processedmap.coordinate_frame)
+    top_right = SkyCoord(1000*u.arcsec, 1000*u.arcsec,
+                         frame = processedmap.coordinate_frame)
+    submap = processedmap.submap(bottom_left, top_right)
+    axes = wcsaxes_compat.gca_wcs(processedmap.wcs)
+    image = processedmap.plot(vmin=-500, vmax=500, axes=axes)
+    axes.coords.grid(False)
+    # Draw solar lat/lon grid
+    overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
+    plt.colorbar(label='B [G]')
+    plt.savefig(data_dir+smartdate+'_detections.png', format='png', dpi=1000)
