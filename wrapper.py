@@ -108,6 +108,10 @@ def main(*fits_file):
     else:
         plot_detections.nodetections(processedmap, data_dir, smartdate)
 
+    # Output SMART detection and map
+#    coredetectionmap.save(data_dir + smartdate + '_detections.fits')
+#    processedmap.save(data_dir + smartdate + '_map.fits')
+
     # Delete fits files
 #    sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])
 #    subprocess.call(sys_call, shell=True)
