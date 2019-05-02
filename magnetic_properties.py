@@ -79,7 +79,7 @@ def main(inmap, inmask, cosmap):
         frcflx = (posflx - negflx) / totflx
         ## Add to dataframe
         magdf = magdf.append([{'arid': i,
-                             'areabnd': areabnd, 'posareanbnd': posareabnd, 'negareabnd': negareabnd,
+                             'areabnd': areabnd, 'posareabnd': posareabnd, 'negareabnd': negareabnd,
                              'posarea': posarea, 'negarea': negarea, 'totarea': totarea,
                              'bmax': bmax, 'bmin': bmin, 'bmean': bmean,
                              'posflx': posflx, 'negflx': negflx, 'totflx': totflx,
