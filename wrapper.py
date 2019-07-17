@@ -103,14 +103,14 @@ def main(*fits_file):
 
     # Visualise
     if np.max(np.unique(coredetectionmap.data)) > 0:
-        plot_detections.main(processedmap, coredetectionmap, pslmap,
+        plot_detections.main(inmap, coredetectionmap, pslmap,
                              data_dir, smartdate)
     else:
-        plot_detections.nodetections(processedmap, data_dir, smartdate)
+        plot_detections.nodetections(inmap, data_dir, smartdate)
 
     # Output SMART detection and map
-#    coredetectionmap.save(data_dir + smartdate + '_detections.fits')
-#    processedmap.save(data_dir + smartdate + '_map.fits')
+    coredetectionmap.save(data_dir + smartdate + '_detections.fits')
+    processedmap.save(data_dir + smartdate + '_map.fits')
 
     # Delete fits files
 #    sys_call = "".join(['rm -r {}'.format(data_dir+'*.fits')])

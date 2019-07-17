@@ -15,14 +15,14 @@ from astropy.coordinates import SkyCoord
 import astropy.units as u
 import numpy as np
 
-def main(processedmap, coredetectionmap, pslmap, data_dir, smartdate):
+def main(inmap, coredetectionmap, pslmap, data_dir, smartdate):
     """
     Plot and save a simple SMART detection image
 
     Parameters
     ----------
-    processedmap : `~sunpy.map.sources.sdo.HMIMap`
-        SMART-processed magnetogram onto which detections will be overlayed
+    inmap : `~sunpy.map.sources.sdo.HMIMap`
+        SMART magnetogram onto which detections will be overlayed
     coredetectionmap : `~sunpy.map.sources.sdo.HMIMap`
         map of SMART detections to plot
     pslmap : `~sunpy.map.sources.sdo.HMIMap`
@@ -33,26 +33,34 @@ def main(processedmap, coredetectionmap, pslmap, data_dir, smartdate):
         date of observation for image name
     """
     figure = plt.figure()
+    # Flip original map if needed
+    # (a.l.a. process_magnetogram.py)
+    if (inmap.meta['crota2'] >= 100.):
+        data = np.flip(inmap.data, 1)[::-1]
+        inmap = sunpy.map.Map(data, inmap.meta)
+
     # Get same axes
     bottom_left = SkyCoord(-1000*u.arcsec, -1000*u.arcsec,
-                           frame=processedmap.coordinate_frame)
+                           frame=inmap.coordinate_frame)
     top_right = SkyCoord(1000*u.arcsec, 1000*u.arcsec,
-                         frame=processedmap.coordinate_frame)
-    submap = processedmap.submap(bottom_left, top_right)
-    axes = wcsaxes_compat.gca_wcs(processedmap.wcs)
-    image = processedmap.plot(vmin=-500, vmax=500, axes=axes)
+                         frame=inmap.coordinate_frame)
+    submap = inmap.submap(bottom_left, top_right)
+    axes = wcsaxes_compat.gca_wcs(inmap.wcs)
+    image = inmap.plot(vmin=-500, vmax=500, axes=axes)
     axes.coords.grid(False)
     # Draw solar lat/lon grid
     overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
     plt.colorbar(label='B [G]')
     # Overlay PILs and SMART detections
-    plt.contour(pslmap.data, origin='lower',
-                colors='lightblue', linewidths=1,
-                vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
+#    plt.contour(pslmap.data, origin='lower',
+#                colors='lightblue', linewidths=1,
+#                vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
     plt.contour(coredetectionmap.data > 0., origin='lower',
                 colors='blue', linewidths=1.0,
                 vmin=0., vmax=np.max(np.unique(coredetectionmap.data))+1)
     plt.savefig(data_dir+smartdate+'_detections.eps')
+#    plt.savefig(data_dir+smartdate+'_detections.png',format='png',dpi=1000)
+
 
 
 def grid_overlay(axes, grid_spacing):
@@ -88,18 +96,18 @@ def grid_overlay(axes, grid_spacing):
     overlay.grid(**grid_kw, linestyle='dashed', linewidth=0.1)
     return overlay
 
-def nodetections(processedmap, data_dir, smartdate):
+def nodetections(inmap, data_dir, smartdate):
     """If there are no detections,
     just plot a blank magnetogram"""
     figure = plt.figure()
     # Get same axes
     bottom_left = SkyCoord(-1000*u.arcsec, -1000*u.arcsec,
-                           frame = processedmap.coordinate_frame)
+                           frame = inmap.coordinate_frame)
     top_right = SkyCoord(1000*u.arcsec, 1000*u.arcsec,
-                         frame = processedmap.coordinate_frame)
-    submap = processedmap.submap(bottom_left, top_right)
-    axes = wcsaxes_compat.gca_wcs(processedmap.wcs)
-    image = processedmap.plot(vmin=-500, vmax=500, axes=axes)
+                         frame = inmap.coordinate_frame)
+    submap = inmap.submap(bottom_left, top_right)
+    axes = wcsaxes_compat.gca_wcs(inmap.wcs)
+    image = inmap.plot(vmin=-500, vmax=500, axes=axes)
     axes.coords.grid(False)
     # Draw solar lat/lon grid
     overlay = grid_overlay(axes, grid_spacing=10 * u.deg)
