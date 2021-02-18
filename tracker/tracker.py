@@ -54,55 +54,59 @@ def main(input_folder='/Users/sophie/data/smart/track_test/',
     if not output_folder:
         output_folder = input_folder
 
-    filenames = sorted(os.listdir(input_folder))
-    filename_stems = [x[:14] for x in filenames if "_detections.fits" in x]
-    extensions = ["properties.json", "detections.fits", "map.fits"]
+    try:
+        filenames = sorted(os.listdir(input_folder))
+        filename_stems = [x[:14] for x in filenames if "_detections.fits" in x]
+        extensions = ["properties.json", "detections.fits", "map.fits"]
 
-    json_data = json.load(open(input_folder + filename_stems[0] + extensions[0]))
-    time1 = datetime_from_json(json_data)
-
-    # read in map
-    yy = sunpy.map.Map(input_folder + filename_stems[0] + extensions[1]).data
-    master_num_of_ss, old_ss = tracking_modules.get_sunspot_data(yy, time1)
-
-    # write out json with updated 'trueid' numbers
-    true_id = {}
-    for index in range(len(old_ss)):
-        true_id[str(index)] = int(old_ss[index].number)
-
-    json_data['posprop']['trueid'] = true_id
-    with open(output_folder + filename_stems[0] + extensions[0], 'w') as outfile:
-        json.dump(json_data, outfile,
-                  indent=4, separators=(', ', ': '))
-
-    # now for the rest of the images
-    count = 0
-    for filename_stem in filename_stems[1:]:
-        # read in json
-        json_data = json.load(open(input_folder + filename_stem + extensions[0]))
-        time2 = datetime_from_json(json_data)
+        json_data = json.load(open(input_folder + filename_stems[0] + extensions[0]))
+        time1 = datetime_from_json(json_data)
 
         # read in map
-        yy2 = sunpy.map.Map(input_folder + filename_stem + extensions[1]).data
-        num_of_ss2, new_ss = tracking_modules.get_sunspot_data(yy2, time2)
-
-        overlap_matrix = tracking_modules.make_overlap_matrix_V2(old_ss, new_ss)
-        old_ss, new_ss, master_num_of_ss = tracking_modules.assign_numbers(old_ss, new_ss, overlap_matrix, master_num_of_ss)
+        yy = sunpy.map.Map(input_folder + filename_stems[0] + extensions[1]).data
+        master_num_of_ss, old_ss = tracking_modules.get_sunspot_data(yy, time1)
 
         # write out json with updated 'trueid' numbers
         true_id = {}
-        for index in range(len(new_ss)):
-            true_id[str(index)] = int(new_ss[index].number)
+        for index in range(len(old_ss)):
+            true_id[str(index)] = int(old_ss[index].number)
 
         json_data['posprop']['trueid'] = true_id
-        with open(output_folder + filename_stem + extensions[0], 'w') as outfile:
+        with open(output_folder + filename_stems[0] + extensions[0], 'w') as outfile:
             json.dump(json_data, outfile,
                       indent=4, separators=(', ', ': '))
 
-        old_ss = deepcopy(new_ss)
+        # now for the rest of the images
+        count = 0
+        for filename_stem in filename_stems[1:]:
+            # read in json
+            json_data = json.load(open(input_folder + filename_stem + extensions[0]))
+            time2 = datetime_from_json(json_data)
 
-        count += 1
-        print(count)
+            # read in map
+            yy2 = sunpy.map.Map(input_folder + filename_stem + extensions[1]).data
+            num_of_ss2, new_ss = tracking_modules.get_sunspot_data(yy2, time2)
+
+            overlap_matrix = tracking_modules.make_overlap_matrix_V2(old_ss, new_ss)
+            old_ss, new_ss, master_num_of_ss = tracking_modules.assign_numbers(old_ss, new_ss, overlap_matrix, master_num_of_ss)
+
+            # write out json with updated 'trueid' numbers
+            true_id = {}
+            for index in range(len(new_ss)):
+                true_id[str(index)] = int(new_ss[index].number)
+
+            json_data['posprop']['trueid'] = true_id
+            with open(output_folder + filename_stem + extensions[0], 'w') as outfile:
+                json.dump(json_data, outfile,
+                          indent=4, separators=(', ', ': '))
+
+            old_ss = deepcopy(new_ss)
+
+            count += 1
+            print(count)
+    except IOError:
+        print("Issue with input files")
+        exit()
 
 
 def datetime_from_json(data):
